@@ -49,15 +49,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   const [createPlaceholder, setCreatePlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
   const [joinPlaceholder, setJoinPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
 
-  // Update placeholders when step changes
-  useEffect(() => {
-    if (step === 'create') {
-      setCreatePlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
-    } else if (step === 'join') {
-      setJoinPlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
-    }
-  }, [step])
-
   // If the user arrived via an invite link (`?code=ABC123`), drop them
   // directly onto the join form with the code prefilled.
   useEffect(() => {
@@ -131,6 +122,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
             <div className="space-y-4 animate-fade-in">
               <button
                 onClick={() => {
+                  setCreatePlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
                   setStep('create')
                   setLocalError('')
                 }}
@@ -141,6 +133,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               </button>
               <button
                 onClick={() => {
+                  setJoinPlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
                   setStep('join')
                   setLocalError('')
                 }}
