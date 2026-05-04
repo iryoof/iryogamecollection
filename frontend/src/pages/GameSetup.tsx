@@ -84,12 +84,12 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
   }
 
   const handleKickPlayer = (playerId: string, nickname: string) => {
-    if (!window.confirm(`Moechtest du ${nickname} wirklich aus der Lobby entfernen?`)) return
+    if (!window.confirm(`Möchtest du ${nickname} wirklich aus der Lobby entfernen?`)) return
     kickPlayer(playerId)
   }
 
   const handleTransferHost = (playerId: string, nickname: string) => {
-    if (!window.confirm(`Host-Rolle an ${nickname} uebertragen?`)) return
+    if (!window.confirm(`Host-Rolle an ${nickname} übertragen?`)) return
     transferHost(playerId)
   }
 
@@ -118,7 +118,7 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
             }}
             className="action-secondary w-full px-6 py-4 text-sm"
           >
-            Zurueck zum Menue
+            Zurück zum Menü
           </button>
         </div>
       </div>
@@ -133,9 +133,6 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
         <div className="text-center space-y-3">
           <p className="section-kicker">Lobby Control</p>
           <h1 className="hero-title text-[clamp(2.5rem,8vw,4.8rem)] leading-none">Session</h1>
-          <p className="text-sm text-zinc-500 font-mono-ui uppercase tracking-[0.2em]">
-            Leute sammeln. Ton setzen. Startschuss geben.
-          </p>
         </div>
 
         <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
@@ -214,7 +211,7 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleTransferHost(player.id, player.nickname)}
-                              title="Host-Rolle uebertragen"
+                              title="Host-Rolle übertragen"
                               className="action-secondary px-3 py-2 text-[11px]"
                             >
                               Host geben
@@ -310,18 +307,18 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                   }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Lobby verlassen (Host wird uebertragen)
+                  Lobby verlassen (Host wird übertragen)
                 </button>
                 <button
                   onClick={() => {
-                    if (!window.confirm('Lobby wirklich fuer alle schliessen?')) return
+                    if (!window.confirm('Lobby wirklich für alle schließen?')) return
                     closeLobby()
                     clearSession()
                     onNavigate('menu')
                   }}
                   className="action-danger w-full px-6 py-4 text-sm"
                 >
-                  Lobby schliessen
+                  Lobby schließen
                 </button>
               </>
             ) : (
@@ -341,7 +338,7 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
               onClick={() => onNavigate('menu')}
               className="action-ghost w-full px-6 py-4 text-sm"
             >
-              Zurueck
+              Zurück
             </button>
           </div>
         </div>

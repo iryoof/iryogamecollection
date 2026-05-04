@@ -3,48 +3,30 @@ import { Socket } from 'socket.io-client'
 import { PageType } from '../App'
 import type { GameSocketApi } from '../hooks/useGameSocket'
 
-const SPLASH_MESSAGES = [
-  'Ey Nico kennst du jemanden der Tin heißt?',
-  'Bdonis',
-  'Warum liegt auf Antons Kopf Stroh?',
-  'Noah hat KEINE kroatischen Wurzeln'
+const RAPPER_NAMES = [
+  'Kollegah',
+  'Farid Bang',
+  'Asche',
+  'Sun Diego',
+  'Spongebozz',
+  'Perplexx',
+  'Fortis',
+  'Taube',
+  'Zodiac',
+  '4Tune',
+  'Gio',
+  'Grinch Hill',
+  'Majoe',
+  'SSIO',
+  'Daemon',
+  'Hank',
+  'Bushido',
+  'Shindy',
+  'Laas',
+  'OG Keemo',
+  'John Webber',
+  'Rapido'
 ]
-
-const getLocalDateKey = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-const hashString = (input: string) => {
-  let hash = 0
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash << 5) - hash + input.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash)
-}
-
-const seededRandom = (seed: number) => {
-  let value = seed
-  return () => {
-    value = (value * 1664525 + 1013904223) % 4294967296
-    return value / 4294967296
-  }
-}
-
-const getDailySplashMessages = (count: number) => {
-  const seed = hashString(getLocalDateKey())
-  const rng = seededRandom(seed)
-  const shuffled = [...SPLASH_MESSAGES]
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled.slice(0, Math.min(count, shuffled.length))
-}
 
 interface LobbyScreenProps {
   socket: Socket | null
@@ -64,7 +46,8 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   const [step, setStep] = useState<'menu' | 'join' | 'create'>('menu')
   const [localError, setLocalError] = useState('')
   const [pendingNavigation, setPendingNavigation] = useState(false)
-  const splashMessage = getDailySplashMessages(1)[0]
+  const [createPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+  const [joinPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
 
   // If the user arrived via an invite link (`?code=ABC123`), drop them
   // directly onto the join form with the code prefilled.
@@ -125,11 +108,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
           <p className="section-kicker">Underground Word Relay</p>
           <div className="space-y-3">
             <h1 className="hero-title text-[clamp(3.4rem,12vw,6.8rem)] leading-none">Cypher</h1>
-            {splashMessage && (
-              <div className="flex justify-center">
-                <span className="splash-tag">{splashMessage}</span>
-              </div>
-            )}
           </div>
           {!socket?.connected && (
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono-ui uppercase tracking-[0.18em] text-zinc-400">
@@ -185,7 +163,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   value={nickname}
                   onChange={event => setNickname(event.target.value.slice(0, 20))}
                   maxLength={20}
-                  placeholder="z.B. Bob123"
+                  placeholder={createPlaceholder}
                   autoFocus
                   className="w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
                 />
@@ -215,7 +193,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zurueck
+                  Zurück
                 </button>
               </div>
             </div>
@@ -235,7 +213,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   value={nickname}
                   onChange={event => setNickname(event.target.value.slice(0, 20))}
                   maxLength={20}
-                  placeholder="z.B. Bob123"
+                  placeholder={joinPlaceholder}
                   autoFocus
                   className="w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
                 />
@@ -278,7 +256,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zurueck
+                  Zurück
                 </button>
               </div>
             </div>

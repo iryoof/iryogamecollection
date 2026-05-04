@@ -218,7 +218,7 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
             <div className="space-y-5">
               <div className="text-center space-y-2">
                 <p className="section-kicker">Vote</p>
-                <h2 className="text-3xl font-semibold text-white">Besten Text waehlen</h2>
+                <h2 className="text-3xl font-semibold text-white">Besten Text wählen</h2>
                 <p className="text-sm text-zinc-500">Eine Stimme pro Spieler</p>
               </div>
               <div className="space-y-3">
@@ -245,7 +245,7 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                   onClick={handleSkipVoting}
                   className="action-secondary w-full px-4 py-4 text-xs"
                 >
-                  Voting ueberspringen
+                  Voting überspringen
                 </button>
               )}
             </div>
@@ -286,7 +286,7 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                 }}
                 className="action-secondary w-full px-6 py-4 text-sm"
               >
-                Zum Menue
+                Zum Menü
               </button>
             </div>
           )}
@@ -341,7 +341,7 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                 {gameState.maxRounds && gameState.maxRounds > 0 && gameState.currentRound >= gameState.maxRounds ? (
                   <p className="text-sm text-zinc-500">Letzte Runde abgeschlossen.</p>
                 ) : (
-                  <p className="text-sm text-zinc-500">Bereit fuer die naechste Runde?</p>
+                  <p className="text-sm text-zinc-500">Bereit für die nächste Runde?</p>
                 )}
               </div>
 
@@ -411,7 +411,7 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                   onClick={() => { clearSession(); onNavigate('menu') }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zum Menue
+                  Zum Menü
                 </button>
               </div>
             </div>

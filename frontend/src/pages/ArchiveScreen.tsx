@@ -46,7 +46,7 @@ export default function ArchiveScreen({ onNavigate }: ArchiveScreenProps) {
             onClick={() => setSelectedArchive(null)}
             className="action-secondary px-5 py-3 text-xs"
           >
-            Zurueck zum Archiv
+            Zurück zum Archiv
           </button>
 
           <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
@@ -142,7 +142,7 @@ export default function ArchiveScreen({ onNavigate }: ArchiveScreenProps) {
               onClick={() => onNavigate('menu')}
               className="action-secondary w-full px-6 py-4 text-sm"
             >
-              Zurueck zum Menue
+              Zurück zum Menü
             </button>
           </div>
         ) : (
@@ -169,7 +169,7 @@ export default function ArchiveScreen({ onNavigate }: ArchiveScreenProps) {
               onClick={() => onNavigate('menu')}
               className="action-secondary w-full px-6 py-4 text-sm"
             >
-              Zurueck zum Menue
+              Zurück zum Menü
             </button>
           </div>
         )}

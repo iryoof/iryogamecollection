@@ -33,14 +33,14 @@ export default function TwoLineInput({
           onChange={event => setLine1(event.target.value.slice(0, 250))}
           placeholder={placeholder1}
           disabled={isDisabled}
-          className="w-full rounded-[1.5rem] px-5 py-4 text-base placeholder:text-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-[1.5rem] px-5 py-4 text-base text-zinc-100 bg-black/40 placeholder:text-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <input
           value={line2}
           onChange={event => setLine2(event.target.value.slice(0, 250))}
           placeholder={placeholder2}
           disabled={isDisabled}
-          className="w-full rounded-[1.5rem] px-5 py-4 text-base placeholder:text-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full rounded-[1.5rem] px-5 py-4 text-base text-zinc-100 bg-black/40 placeholder:text-zinc-500 disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
