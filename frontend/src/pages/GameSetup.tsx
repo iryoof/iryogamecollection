@@ -29,7 +29,6 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
     setLobbyCode(gameState?.lobbyCode || storedCode)
   }, [gameState?.lobbyCode])
 
-  // If there's no active lobby, show a simple fallback instead of auto-redirecting
   useEffect(() => {
     if (!socket?.connected) return
     if (gameState) return
@@ -85,30 +84,31 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
   }
 
   const handleKickPlayer = (playerId: string, nickname: string) => {
-    if (!window.confirm(`Möchtest du ${nickname} wirklich aus der Lobby entfernen?`)) return
+    if (!window.confirm(`Moechtest du ${nickname} wirklich aus der Lobby entfernen?`)) return
     kickPlayer(playerId)
   }
 
   const handleTransferHost = (playerId: string, nickname: string) => {
-    if (!window.confirm(`Host-Rolle an ${nickname} übertragen?`)) return
+    if (!window.confirm(`Host-Rolle an ${nickname} uebertragen?`)) return
     transferHost(playerId)
   }
 
   if (!gameState) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
-        <div className="w-full max-w-md text-center space-y-4 bg-gray-900 rounded-lg p-8 border border-gray-800">
-          <h1 className="text-2xl font-bold">
+        <div className="screen-shell w-full max-w-lg rounded-[2rem] p-8 text-center space-y-4">
+          <p className="section-kicker">Lobby State</p>
+          <h1 className="text-3xl font-semibold text-white">
             {loading ? 'Lobby wird geladen...' : 'Keine aktive Lobby'}
           </h1>
-          <p className="text-gray-400 text-sm">
+          <p className="text-sm text-zinc-500">
             {loading
-              ? 'Einen Moment bitte â€“ wir holen den Status vom Server.'
+              ? 'Einen Moment bitte - wir holen den Status vom Server.'
               : 'Bitte trete einer Lobby bei oder erstelle eine neue.'}
           </p>
           {error && (
-            <div className="p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400 text-sm">
-              ðŸš« {error}
+            <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
+              {error}
             </div>
           )}
           <button
@@ -116,9 +116,9 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
               clearSession()
               onNavigate('menu')
             }}
-            className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
+            className="action-secondary w-full px-6 py-4 text-sm"
           >
-            Zurück zum Menü
+            Zurueck zum Menue
           </button>
         </div>
       </div>
@@ -129,122 +129,144 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">🎮 Spiel Setup</h1>
-          <p className="text-gray-400">Passe die Einstellungen an</p>
+      <div className="w-full max-w-3xl space-y-6">
+        <div className="text-center space-y-3">
+          <p className="section-kicker">Lobby Control</p>
+          <h1 className="hero-title text-[clamp(2.5rem,8vw,4.8rem)] leading-none">Session</h1>
+          <p className="text-sm text-zinc-500 font-mono-ui uppercase tracking-[0.2em]">
+            Leute sammeln. Ton setzen. Startschuss geben.
+          </p>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-8 space-y-6 border border-gray-800">
-          {/* Lobby Code */}
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-400">Lobby-Code</p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-3xl font-black tracking-widest text-purple-400">
+        <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
+          <div className="surface-panel rounded-[1.5rem] p-5 text-center space-y-3">
+            <p className="section-kicker">Lobby-Code</p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <span className="display-code text-3xl text-white">
                 {lobbyCode || '-'}
               </span>
               {lobbyCode && (
                 <>
                   <button
                     onClick={handleCopyCode}
-                    className="px-3 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 transition"
+                    className="action-secondary px-4 py-3 text-[11px]"
                   >
-                    {copyFeedback === 'code' ? '✓ Kopiert' : 'Code kopieren'}
+                    {copyFeedback === 'code' ? 'Kopiert' : 'Code kopieren'}
                   </button>
                   <button
                     onClick={handleCopyInviteLink}
-                    className="px-3 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 transition"
+                    className="action-secondary px-4 py-3 text-[11px]"
                   >
-                    {copyFeedback === 'link' ? '✓ Kopiert' : '🔗 Link kopieren'}
+                    {copyFeedback === 'link' ? 'Kopiert' : 'Link kopieren'}
                   </button>
                 </>
               )}
             </div>
-            <p className="text-xs text-gray-500">Teile den Code oder Link mit deinen Freunden</p>
+            <p className="text-xs text-zinc-600 font-mono-ui uppercase tracking-[0.14em]">
+              Teile den Code oder den Direktlink mit deinen Freunden
+            </p>
           </div>
 
-          {/* Player List */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-300">Spielerliste</h3>
-              <span className="text-xs text-gray-500">
-                {gameState?.players?.length || 0} Spieler
+          <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="section-kicker">Roster</p>
+                <h3 className="text-2xl font-semibold text-white">Spielerliste</h3>
+              </div>
+              <span className="status-chip status-chip-muted">
+                {gameState.players.length} Spieler
               </span>
             </div>
-            {gameState?.players?.length ? (
-              <div className="grid grid-cols-1 gap-2">
+            {gameState.players.length ? (
+              <div className="grid grid-cols-1 gap-3">
                 {gameState.players.map(player => {
                   const isSelf = player.id === selfId
                   const isPlayerHost = player.id === gameState.hostId
                   const isDisconnected = disconnectedIds.has(player.id)
                   const deadline = gameState.disconnectDeadlines?.[player.id]
+
                   return (
                     <div
                       key={player.id}
-                      className={`flex items-center justify-between px-3 py-2 rounded bg-gray-800 text-sm ${isDisconnected ? 'opacity-60' : ''}`}
+                      className={`surface-panel-strong rounded-[1.25rem] px-4 py-4 text-sm ${
+                        isDisconnected ? 'opacity-70' : ''
+                      }`}
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isPlayerHost && <span title="Host">👑</span>}
-                        <span className="text-gray-200 truncate">{player.nickname}</span>
-                        {isSelf && <span className="text-xs text-gray-500">(du)</span>}
-                        {isDisconnected && (
-                          <DisconnectBadge deadline={deadline} />
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {isPlayerHost && (
+                              <span className="status-chip bg-white text-black border-white">Host</span>
+                            )}
+                            {isSelf && (
+                              <span className="status-chip status-chip-muted">Du</span>
+                            )}
+                            {isDisconnected && (
+                              <DisconnectBadge deadline={deadline} />
+                            )}
+                          </div>
+                          <div className="truncate text-base font-semibold text-zinc-100">
+                            {player.nickname}
+                          </div>
+                        </div>
+
+                        {isHost && !isSelf && !isDisconnected && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleTransferHost(player.id, player.nickname)}
+                              title="Host-Rolle uebertragen"
+                              className="action-secondary px-3 py-2 text-[11px]"
+                            >
+                              Host geben
+                            </button>
+                            <button
+                              onClick={() => handleKickPlayer(player.id, player.nickname)}
+                              title="Spieler entfernen"
+                              className="action-danger px-3 py-2 text-[11px]"
+                            >
+                              Entfernen
+                            </button>
+                          </div>
                         )}
                       </div>
-                      {isHost && !isSelf && !isDisconnected && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleTransferHost(player.id, player.nickname)}
-                            title="Host-Rolle übertragen"
-                            className="text-xs px-2 py-1 rounded bg-purple-700/60 hover:bg-purple-700 transition"
-                          >
-                            🛡️
-                          </button>
-                          <button
-                            onClick={() => handleKickPlayer(player.id, player.nickname)}
-                            title="Spieler entfernen"
-                            className="text-xs px-2 py-1 rounded bg-red-700/60 hover:bg-red-700 transition"
-                          >
-                            👢
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )
                 })}
               </div>
             ) : (
-              <div className="text-xs text-gray-500">Noch keine Spieler beigetreten.</div>
+              <div className="text-xs text-zinc-600 font-mono-ui uppercase tracking-[0.14em]">
+                Noch keine Spieler beigetreten.
+              </div>
             )}
           </div>
-          {/* Timer Toggle */}
-          <div className="space-y-3">
-            <label className="flex items-center space-x-3 cursor-pointer">
+
+          <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
+            <p className="section-kicker">Timer</p>
+            <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4 cursor-pointer">
+              <span className="text-sm text-zinc-200">Timer aktivieren</span>
               <input
                 type="checkbox"
                 checked={timerEnabled}
                 onChange={(e) => setTimerEnabled(e.target.checked)}
-                className="w-5 h-5 rounded bg-gray-800 border-gray-600"
+                className="h-5 w-5 rounded bg-black/40 border-white/20"
               />
-              <span className="text-gray-300 font-semibold">⏱️ Timer aktivieren</span>
             </label>
           </div>
 
-          {/* Timer Display */}
           {timerEnabled && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">
-                ⏰ Zeit pro Runde: <span className="text-purple-400">{timerSeconds}s</span>
+            <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
+              <label className="section-kicker">
+                Zeit pro Runde {timerSeconds}s
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[60, 120, 180, 240, 300].map(seconds => (
                   <button
                     key={seconds}
                     onClick={() => setTimerSeconds(seconds)}
-                    className={`py-2 text-sm rounded-lg font-bold transition ${
+                    className={`rounded-2xl px-4 py-3 text-xs font-mono-ui uppercase tracking-[0.12em] transition ${
                       timerSeconds === seconds
-                        ? 'bg-purple-600'
-                        : 'bg-gray-800 hover:bg-gray-700'
+                        ? 'bg-white text-black border border-white'
+                        : 'bg-white/5 text-zinc-300 border border-white/10 hover:bg-white/10'
                     }`}
                   >
                     {seconds}s
@@ -254,31 +276,30 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
             </div>
           )}
 
-          {/* Summary */}
-          <div className="bg-black/30 rounded p-4 text-sm text-gray-400 space-y-1">
+          <div className="metric-strip rounded-[1.5rem] p-5 text-sm text-zinc-400 space-y-1">
             <p>Mindestens 3 Spieler</p>
-            <p>{timerEnabled ? `✓ Timer: ${timerSeconds}s` : '✓ Ohne Timer'}</p>
+            <p>{timerEnabled ? `Timer: ${timerSeconds}s` : 'Ohne Timer'}</p>
           </div>
 
-          {/* Buttons */}
-          <div className="space-y-3 pt-4">
+          <div className="space-y-3 pt-2">
             {error && (
-              <div className="p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400 text-sm">
-                🚫 {error}
+              <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
+                {error}
               </div>
             )}
             <button
               onClick={handleStartGame}
-              disabled={!gameState || !isHost || (gameState?.players?.length || 0) < 3}
-              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition transform hover:scale-105"
+              disabled={!isHost || gameState.players.length < 3}
+              className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ▶️ Spiel starten
+              Spiel starten
             </button>
             {!isHost && (
-              <div className="text-xs text-gray-500 text-center">
+              <div className="text-xs text-zinc-600 text-center font-mono-ui uppercase tracking-[0.14em]">
                 Nur der Host kann das Spiel starten.
               </div>
             )}
+
             {isHost ? (
               <>
                 <button
@@ -287,20 +308,20 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                     clearSession()
                     onNavigate('menu')
                   }}
-                  className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
+                  className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Lobby verlassen (Host wird übertragen)
+                  Lobby verlassen (Host wird uebertragen)
                 </button>
                 <button
                   onClick={() => {
-                    if (!window.confirm('Lobby wirklich für alle schließen?')) return
+                    if (!window.confirm('Lobby wirklich fuer alle schliessen?')) return
                     closeLobby()
                     clearSession()
                     onNavigate('menu')
                   }}
-                  className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold transition"
+                  className="action-danger w-full px-6 py-4 text-sm"
                 >
-                  Lobby schließen
+                  Lobby schliessen
                 </button>
               </>
             ) : (
@@ -310,16 +331,17 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                   clearSession()
                   onNavigate('menu')
                 }}
-                className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
+                className="action-secondary w-full px-6 py-4 text-sm"
               >
                 Lobby verlassen
               </button>
             )}
+
             <button
               onClick={() => onNavigate('menu')}
-              className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
+              className="action-ghost w-full px-6 py-4 text-sm"
             >
-              ← Zurück
+              Zurueck
             </button>
           </div>
         </div>
@@ -334,6 +356,7 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
  */
 function DisconnectBadge({ deadline }: { deadline: number | undefined }) {
   const [now, setNow] = useState(() => Date.now())
+
   useEffect(() => {
     if (!deadline) return
     const handle = setInterval(() => setNow(Date.now()), 1000)
@@ -341,8 +364,13 @@ function DisconnectBadge({ deadline }: { deadline: number | undefined }) {
   }, [deadline])
 
   if (!deadline) {
-    return <span className="text-xs text-yellow-400">🔌 getrennt</span>
+    return <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-300">Getrennt</span>
   }
+
   const secs = Math.max(0, Math.ceil((deadline - now) / 1000))
-  return <span className="text-xs text-yellow-400">🔌 getrennt ({secs}s)</span>
+  return (
+    <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-300">
+      Getrennt ({secs}s)
+    </span>
+  )
 }

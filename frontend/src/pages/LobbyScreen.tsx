@@ -78,7 +78,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
 
   useEffect(() => {
     if (gameState && pendingNavigation) {
-      // Successfully joined or created lobby
       setStep('menu')
       setPendingNavigation(false)
       onNavigate('setup')
@@ -120,171 +119,180 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   const displayError = localError || error
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-12">
-          <h1 className="text-7xl font-bold mb-3 tracking-widest">🎤</h1>
-          <h2 className="text-5xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
-            CYPHER
-          </h2>
-          {splashMessage && (
-            <div className="mb-2">
-              <p className="text-xs text-yellow-300 italic">
-                {splashMessage}
-              </p>
-            </div>
-          )}
-          <p className="text-gray-400 mb-2">Digitales Reimspiel</p>
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
+      <div className="w-full max-w-xl space-y-8">
+        <div className="text-center space-y-5">
+          <p className="section-kicker">Underground Word Relay</p>
+          <div className="space-y-3">
+            <h1 className="hero-title text-[clamp(3.4rem,12vw,6.8rem)] leading-none">Cypher</h1>
+            {splashMessage && (
+              <div className="flex justify-center">
+                <span className="splash-tag">{splashMessage}</span>
+              </div>
+            )}
+          </div>
+          <div className="max-w-lg mx-auto space-y-2">
+            <p className="text-lg text-zinc-200">Minimal. Roh. Direkt aus dem Untergrund.</p>
+            <p className="text-sm text-zinc-500 font-mono-ui uppercase tracking-[0.24em]">
+              Schreibe. Gib weiter. Zerlege die Stille.
+            </p>
+          </div>
           {!socket?.connected && (
-            <p className="text-red-400 text-sm">⚠️ Server-Verbindung wird hergestellt...</p>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono-ui uppercase tracking-[0.18em] text-zinc-400">
+              <span className="h-2 w-2 rounded-full bg-white/40 animate-pulse-line" />
+              Server-Verbindung wird hergestellt
+            </div>
           )}
         </div>
 
-        {/* Menu */}
-        {step === 'menu' && (
-          <div className="space-y-4">
-            <button
-              onClick={() => {
-                setStep('create')
-                setLocalError('')
-              }}
-              disabled={!socket?.connected || loading}
-              className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition transform hover:scale-105 text-lg"
-            >
-              🎮 Neues Spiel erstellen
-            </button>
-            <button
-              onClick={() => {
-                setStep('join')
-                setLocalError('')
-              }}
-              disabled={!socket?.connected || loading}
-              className="w-full px-6 py-4 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition text-lg"
-            >
-              👥 Spiel beitreten
-            </button>
-            <button
-              onClick={() => onNavigate('archive')}
-              className="w-full px-6 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition text-lg"
-            >
-              📻 Archiv anschauen
-            </button>
-          </div>
-        )}
-
-        {/* Create Lobby */}
-        {step === 'create' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold">Neues Spiel erstellen</h3>
+        <div className="screen-shell rounded-[2rem] p-6 md:p-8">
+          {step === 'menu' && (
+            <div className="space-y-4 animate-fade-in">
+              <button
+                onClick={() => {
+                  setStep('create')
+                  setLocalError('')
+                }}
+                disabled={!socket?.connected || loading}
+                className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Neues Spiel erstellen
+              </button>
+              <button
+                onClick={() => {
+                  setStep('join')
+                  setLocalError('')
+                }}
+                disabled={!socket?.connected || loading}
+                className="action-secondary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Spiel beitreten
+              </button>
+              <button
+                onClick={() => onNavigate('archive')}
+                className="action-ghost w-full px-6 py-4 text-sm"
+              >
+                Archiv ansehen
+              </button>
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Dein Nickname</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value.slice(0, 20))}
-                maxLength={20}
-                placeholder="z.B. Bob123"
-                autoFocus
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500 text-white placeholder-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">{nickname.length}/20</p>
-            </div>
-
-            {displayError && (
-              <div className="p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400 text-sm">
-                ❌ {displayError}
+          {step === 'create' && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="space-y-2 text-center">
+                <p className="section-kicker">Create Lobby</p>
+                <h3 className="text-3xl font-semibold text-white">Neue Session</h3>
               </div>
-            )}
 
-            <button
-              onClick={handleCreateLobby}
-              disabled={loading || !socket?.connected}
-              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition transform hover:scale-105"
-            >
-              {loading ? '⏳ Erstelle...' : '✓ Spiel erstellen'}
-            </button>
-
-            <button
-              onClick={() => {
-                setStep('menu')
-                setNickname('')
-                setLocalError('')
-              }}
-              className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
-            >
-              ← Zurück
-            </button>
-          </div>
-        )}
-
-        {/* Join Lobby */}
-        {step === 'join' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold">Spiel beitreten</h3>
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Dein Nickname</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value.slice(0, 20))}
-                maxLength={20}
-                placeholder="z.B. Bob123"
-                autoFocus
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500 text-white placeholder-gray-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">{nickname.length}/20</p>
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Lobby-Code</label>
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                maxLength={6}
-                placeholder="z.B. ABC123"
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-purple-500 uppercase tracking-widest font-bold text-white placeholder-gray-500"
-              />
-            </div>
-
-            {displayError && (
-              <div className="p-3 bg-red-900/30 border border-red-500 rounded-lg text-red-400 text-sm">
-                ❌ {displayError}
+              <div className="space-y-2">
+                <label className="section-kicker">Dein Nickname</label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={event => setNickname(event.target.value.slice(0, 20))}
+                  maxLength={20}
+                  placeholder="z.B. Bob123"
+                  autoFocus
+                  className="w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
+                />
+                <p className="text-right text-xs text-zinc-600 font-mono-ui">{nickname.length}/20</p>
               </div>
-            )}
 
-            <button
-              onClick={handleJoinLobby}
-              disabled={loading || !socket?.connected}
-              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition transform hover:scale-105"
-            >
-              {loading ? '⏳ Trete bei...' : '✓ Beitreten'}
-            </button>
+              {displayError && (
+                <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
+                  {displayError}
+                </div>
+              )}
 
-            <button
-              onClick={() => {
-                setStep('menu')
-                setNickname('')
-                setJoinCode('')
-                setLocalError('')
-              }}
-              className="w-full px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold transition"
-            >
-              ← Zurück
-            </button>
-          </div>
-        )}
+              <div className="space-y-3">
+                <button
+                  onClick={handleCreateLobby}
+                  disabled={loading || !socket?.connected}
+                  className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Erstelle...' : 'Spiel erstellen'}
+                </button>
 
-        {/* Footer */}
-        <div className="mt-12 text-center text-xs text-gray-600">
-          <p>🎤 Made with ❤️ for your friends</p>
+                <button
+                  onClick={() => {
+                    setStep('menu')
+                    setNickname('')
+                    setLocalError('')
+                  }}
+                  className="action-secondary w-full px-6 py-4 text-sm"
+                >
+                  Zurueck
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'join' && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="space-y-2 text-center">
+                <p className="section-kicker">Join Lobby</p>
+                <h3 className="text-3xl font-semibold text-white">In die Session rein</h3>
+              </div>
+
+              <div className="space-y-2">
+                <label className="section-kicker">Dein Nickname</label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={event => setNickname(event.target.value.slice(0, 20))}
+                  maxLength={20}
+                  placeholder="z.B. Bob123"
+                  autoFocus
+                  className="w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
+                />
+                <p className="text-right text-xs text-zinc-600 font-mono-ui">{nickname.length}/20</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="section-kicker">Lobby-Code</label>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={event => setJoinCode(event.target.value.toUpperCase())}
+                  maxLength={6}
+                  placeholder="z.B. ABC123"
+                  className="display-code w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
+                />
+              </div>
+
+              {displayError && (
+                <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
+                  {displayError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleJoinLobby}
+                  disabled={loading || !socket?.connected}
+                  className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Trete bei...' : 'Beitreten'}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setStep('menu')
+                    setNickname('')
+                    setJoinCode('')
+                    setLocalError('')
+                  }}
+                  className="action-secondary w-full px-6 py-4 text-sm"
+                >
+                  Zurueck
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="text-center text-xs text-zinc-600 font-mono-ui uppercase tracking-[0.22em]">
+          Built for cramped rooms and loud ideas
         </div>
       </div>
     </div>

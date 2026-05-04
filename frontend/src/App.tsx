@@ -35,7 +35,6 @@ function App() {
   const [inviteCode, setInviteCode] = useState<string>(() => readInviteCode())
 
   useEffect(() => {
-    // Initialize Socket.io connection
     const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000', {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -45,7 +44,7 @@ function App() {
     })
 
     socket.on('connect', () => {
-      console.log('✅ Connected to server')
+      console.log('Connected to server')
       setAppState((prev: AppState) => ({ ...prev, socket, sessionId: socket.id ?? null }))
       // Per-tab session data (lobby + player identity) lives in sessionStorage
       // so each tab stays an independent client. The nickname is kept in
@@ -59,7 +58,7 @@ function App() {
     })
 
     socket.on('disconnect', () => {
-      console.log('❌ Disconnected from server')
+      console.log('Disconnected from server')
     })
 
     const handleLobbyClosed = () => {
@@ -113,20 +112,22 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-hidden">
-      {/* Background effects */}
-      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-black to-black pointer-events-none" />
+    <div className="min-h-screen text-white overflow-x-hidden">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.09),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.05),transparent_28%)]" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/5 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white/5 to-transparent" />
+      </div>
 
-      {/* Main content */}
       <div className="relative z-10">
         {kickedReason && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-3 bg-red-600 text-white rounded-lg shadow-lg border border-red-400 flex items-center gap-3 max-w-md">
-            <span className="text-sm">👢 {kickedReason}</span>
+            <span className="text-sm">Du wurdest entfernt: {kickedReason}</span>
             <button
               onClick={clearKickedReason}
               className="text-white/90 hover:text-white text-xs underline"
             >
-              Schließen
+              Schliessen
             </button>
           </div>
         )}
