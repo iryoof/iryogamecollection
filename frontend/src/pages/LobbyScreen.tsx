@@ -131,12 +131,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               </div>
             )}
           </div>
-          <div className="max-w-lg mx-auto space-y-2">
-            <p className="text-lg text-zinc-200">Minimal. Roh. Direkt aus dem Untergrund.</p>
-            <p className="text-sm text-zinc-500 font-mono-ui uppercase tracking-[0.24em]">
-              Schreibe. Gib weiter. Zerlege die Stille.
-            </p>
-          </div>
           {!socket?.connected && (
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono-ui uppercase tracking-[0.18em] text-zinc-400">
               <span className="h-2 w-2 rounded-full bg-white/40 animate-pulse-line" />
@@ -289,10 +283,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               </div>
             </div>
           )}
-        </div>
-
-        <div className="text-center text-xs text-zinc-600 font-mono-ui uppercase tracking-[0.22em]">
-          Built for cramped rooms and loud ideas
         </div>
       </div>
     </div>
