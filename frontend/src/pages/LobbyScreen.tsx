@@ -46,8 +46,17 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   const [step, setStep] = useState<'menu' | 'join' | 'create'>('menu')
   const [localError, setLocalError] = useState('')
   const [pendingNavigation, setPendingNavigation] = useState(false)
-  const [createPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
-  const [joinPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+  const [createPlaceholder, setCreatePlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+  const [joinPlaceholder, setJoinPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+
+  // Update placeholders when step changes
+  useEffect(() => {
+    if (step === 'create') {
+      setCreatePlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+    } else if (step === 'join') {
+      setJoinPlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+    }
+  }, [step])
 
   // If the user arrived via an invite link (`?code=ABC123`), drop them
   // directly onto the join form with the code prefilled.
