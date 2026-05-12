@@ -115,7 +115,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8 relative">
       <div className="w-full max-w-xl space-y-8">
         <div className="text-center space-y-5">
           <p className="section-kicker">{t('undergroundWordRelay')}</p>
@@ -279,33 +279,33 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
         </div>
 
         {/* Language Selector Button */}
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-8 right-8 z-[100]">
           <div className="relative">
             <button
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-              className="bg-black/80 hover:bg-black/90 text-white px-4 py-2 rounded-lg border border-white/10 backdrop-blur-sm transition-colors"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl border-2 border-white/30 backdrop-blur-sm transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              {t('language')}
+              🌍 {t('language')}
             </button>
             {showLanguageDropdown && (
-              <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/10 rounded-lg backdrop-blur-sm min-w-[120px]">
+              <div className="absolute bottom-full right-0 mb-3 bg-black/95 border-2 border-white/20 rounded-xl backdrop-blur-sm min-w-[140px] shadow-2xl">
                 <button
                   onClick={() => changeLanguage('de')}
-                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 first:rounded-t-lg"
+                  className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 first:rounded-t-xl transition-colors font-medium"
                 >
-                  Deutsch
+                  🇩🇪 Deutsch
                 </button>
                 <button
                   onClick={() => changeLanguage('en')}
-                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                  className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 transition-colors font-medium"
                 >
-                  English
+                  🇬🇧 English
                 </button>
                 <button
                   onClick={() => changeLanguage('fr')}
-                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 last:rounded-b-lg"
+                  className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 last:rounded-b-xl transition-colors font-medium"
                 >
-                  Français
+                  🇫🇷 Français
                 </button>
               </div>
             )}
