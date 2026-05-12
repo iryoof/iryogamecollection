@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
-import { PageType } from '../App'
+import { PageType } from '../types'
 import type { GameSocketApi } from '../hooks/useGameSocket'
 import { useTranslation } from 'react-i18next'
 
@@ -160,12 +160,6 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                 className="action-ghost w-full px-6 py-4 text-sm"
               >
                 {t('viewArchive')}
-              </button>
-              <button
-                onClick={() => onNavigate('portal')}
-                className="action-secondary w-full px-6 py-4 text-sm opacity-70 hover:opacity-100"
-              >
-                ← Zurück zum Portal
               </button>
             </div>
           )}

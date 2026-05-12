@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Socket } from 'socket.io-client'
-import { PageType } from '../App'
+import { PageType } from '../types'
 import type { GameSocketApi } from '../hooks/useGameSocket'
 
 interface GameSetupProps {

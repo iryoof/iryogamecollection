@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
-import GamePortal from './pages/GamePortal'
-import LobbyScreen from './pages/LobbyScreen'
-import GameScreen from './pages/GameScreen'
-import GameSetup from './pages/GameSetup'
-import ArchiveScreen from './pages/ArchiveScreen'
-import { useGameSocket } from './hooks/useGameSocket'
-import './styles/globals.css'
+import LobbyScreen from './LobbyScreen'
+import GameScreen from './GameScreen'
+import GameSetup from './GameSetup'
+import ArchiveScreen from './ArchiveScreen'
+import { useGameSocket } from '../hooks/useGameSocket'
+import '../styles/globals.css'
 
-export type PageType = 'portal' | 'menu' | 'lobby' | 'setup' | 'game' | 'archive' | 'werbinich'
+export type PageType = 'menu' | 'lobby' | 'setup' | 'game' | 'archive'
 
 interface AppState {
   currentPage: PageType
@@ -25,9 +24,9 @@ const readInviteCode = (): string => {
   return /^[A-Z0-9]{4,8}$/.test(code) ? code : ''
 }
 
-function App() {
+export default function CypherGame() {
   const [appState, setAppState] = useState<AppState>({
-    currentPage: 'portal',
+    currentPage: 'menu',
     socket: null,
     sessionId: null
   })
@@ -132,19 +131,6 @@ function App() {
             </button>
           </div>
         )}
-
-        {appState.currentPage === 'portal' && (
-          <GamePortal
-            onNavigate={(game) => {
-              if (game === 'cypher') {
-                setAppState((prev: AppState) => ({ ...prev, currentPage: 'menu' }))
-              } else if (game === 'werbinich') {
-                // Navigate to Wer bin ich (external link or embedded component)
-                window.location.href = 'https://werbinich-production.up.railway.app'
-              }
-            }}
-          />
-        )}
         {appState.currentPage === 'menu' && (
           <LobbyScreen
             socket={appState.socket}
@@ -167,5 +153,3 @@ function App() {
     </div>
   )
 }
-
-export default App

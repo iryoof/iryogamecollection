@@ -1,10 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const isGhPages = process.env.GITHUB_PAGES === 'true'
-
 export default defineConfig({
-  base: isGhPages ? '/cypher/' : '/',
+  base: '/iryogamecollection/',
   plugins: [react()],
   server: {
     port: 5173,

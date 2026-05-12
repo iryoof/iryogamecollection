@@ -1,11 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-interface GamePortalProps {
-  onNavigate: (game: 'cypher' | 'werbinich') => void
-}
-
-export default function GamePortal({ onNavigate }: GamePortalProps) {
+export default function GamePortal() {
   const { t } = useTranslation()
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
 
@@ -32,9 +29,9 @@ export default function GamePortal({ onNavigate }: GamePortalProps) {
         {/* Games Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {/* Cypher Card */}
-          <button
-            onClick={() => onNavigate('cypher')}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 hover:border-blue-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20"
+          <Link
+            to="/cypher"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 hover:border-blue-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20 no-underline"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all duration-300" />
             <div className="relative z-10">
@@ -48,12 +45,12 @@ export default function GamePortal({ onNavigate }: GamePortalProps) {
                 Spielen →
               </div>
             </div>
-          </button>
+          </Link>
 
           {/* Wer Bin Ich Card */}
-          <button
-            onClick={() => onNavigate('werbinich')}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600/20 to-red-600/20 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/20"
+          <Link
+            to="/werbinich"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-600/20 to-red-600/20 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-amber-500/20 no-underline"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-red-500/10 group-hover:from-amber-500/20 group-hover:to-red-500/20 transition-all duration-300" />
             <div className="relative z-10">
@@ -67,7 +64,7 @@ export default function GamePortal({ onNavigate }: GamePortalProps) {
                 Spielen →
               </div>
             </div>
-          </button>
+          </Link>
         </div>
 
         {/* Stats Section */}
