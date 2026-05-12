@@ -22,5 +22,13 @@
   "codeRequired": "Code du salon requis !",
   "noConnection": "Pas de connexion au serveur !",
   "language": "Langue",
-  "selectLanguage": "Sélectionner la langue"
+  "selectLanguage": "Sélectionner la langue",
+  "chooseGame": "Choisissez un jeu et commencez à jouer!",
+  "cypherDescription": "Paroles de rap collaboratives - Échangez des mots entre joueurs et maintenez le flow!",
+  "werBinIch": "Qui suis-je?",
+  "riddleGame": "Jeu d'énigmes",
+  "werBinIchDescription": "Écrivez des mots pour que les autres les devinent et découvrez qui/ce qu'ils sont - le jeu de devinette classique!",
+  "gamesAvailable": "Jeux disponibles",
+  "players": "Joueurs",
+  "multilingual": "Multilingue"
 }

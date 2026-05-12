@@ -161,6 +161,12 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               >
                 {t('viewArchive')}
               </button>
+              <button
+                onClick={() => onNavigate('portal')}
+                className="action-secondary w-full px-6 py-4 text-sm opacity-70 hover:opacity-100"
+              >
+                ← Zurück zum Portal
+              </button>
             </div>
           )}
 

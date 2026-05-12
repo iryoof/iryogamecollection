@@ -22,5 +22,13 @@
   "codeRequired": "Lobby code required!",
   "noConnection": "No connection to server!",
   "language": "Language",
-  "selectLanguage": "Select Language"
+  "selectLanguage": "Select Language",
+  "chooseGame": "Choose a game and start playing!",
+  "cypherDescription": "Collaborative rap lyrics - Pass words between players and keep the flow!",
+  "werBinIch": "Who am I?",
+  "riddleGame": "Riddle Game",
+  "werBinIchDescription": "Write words for others to guess and find out who/what they are - the classic guessing game!",
+  "gamesAvailable": "Games available",
+  "players": "Players",
+  "multilingual": "Multilingual"
 }

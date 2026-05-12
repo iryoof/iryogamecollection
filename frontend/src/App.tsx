@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
+import GamePortal from './pages/GamePortal'
 import LobbyScreen from './pages/LobbyScreen'
 import GameScreen from './pages/GameScreen'
 import GameSetup from './pages/GameSetup'
@@ -7,7 +8,7 @@ import ArchiveScreen from './pages/ArchiveScreen'
 import { useGameSocket } from './hooks/useGameSocket'
 import './styles/globals.css'
 
-export type PageType = 'menu' | 'lobby' | 'setup' | 'game' | 'archive'
+export type PageType = 'portal' | 'menu' | 'lobby' | 'setup' | 'game' | 'archive' | 'werbinich'
 
 interface AppState {
   currentPage: PageType
@@ -26,7 +27,7 @@ const readInviteCode = (): string => {
 
 function App() {
   const [appState, setAppState] = useState<AppState>({
-    currentPage: 'menu',
+    currentPage: 'portal',
     socket: null,
     sessionId: null
   })
@@ -130,6 +131,19 @@ function App() {
               Schliessen
             </button>
           </div>
+        )}
+
+        {appState.currentPage === 'portal' && (
+          <GamePortal
+            onNavigate={(game) => {
+              if (game === 'cypher') {
+                setAppState((prev: AppState) => ({ ...prev, currentPage: 'menu' }))
+              } else if (game === 'werbinich') {
+                // Navigate to Wer bin ich (external link or embedded component)
+                window.location.href = 'https://werbinich-production.up.railway.app'
+              }
+            }}
+          />
         )}
         {appState.currentPage === 'menu' && (
           <LobbyScreen

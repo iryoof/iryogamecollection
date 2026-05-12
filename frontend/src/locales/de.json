@@ -22,5 +22,13 @@
   "codeRequired": "Lobby-Code erforderlich!",
   "noConnection": "Keine Verbindung zum Server!",
   "language": "Sprache",
-  "selectLanguage": "Sprache auswählen"
+  "selectLanguage": "Sprache auswählen",
+  "chooseGame": "Wähle ein Spiel und spielen los!",
+  "cypherDescription": "Collaborative Rap-Lyriken - Übergebe Wörter zwischen Spielern und halte den Flow!",
+  "werBinIch": "Wer bin ich?",
+  "riddleGame": "Rätsel Spiel",
+  "werBinIchDescription": "Schreibe Wörter für andere auf und erraten Sie wer/was sie sind - das klassische Ratespiel!",
+  "gamesAvailable": "Spiele verfügbar",
+  "players": "Spieler",
+  "multilingual": "Mehrsprachig"
 }
