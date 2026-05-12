@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import MainMenu from '../games/werbinich/MainMenu'
 import Lobby from '../games/werbinich/Lobby'
@@ -7,17 +7,53 @@ import type {
   WerBinIchAck,
   WerBinIchGameState,
   WerBinIchLobbyState,
+  WerBinIchSession,
   WerBinIchScreen
 } from '../games/werbinich/types'
 import '../styles/globals.css'
 
+const SESSION_STORAGE_KEY = 'werbinich:session'
+const RECONNECT_GRACE_MS = 60_000
+
+const readStoredSession = (): WerBinIchSession | null => {
+  if (typeof window === 'undefined') return null
+
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw) as WerBinIchSession
+  } catch {
+    localStorage.removeItem(SESSION_STORAGE_KEY)
+    return null
+  }
+}
+
 export default function WerBinIchGame() {
+  const initialSession = readStoredSession()
   const [screen, setScreen] = useState<WerBinIchScreen>('menu')
   const [socket, setSocket] = useState<Socket | null>(null)
   const [lobbyData, setLobbyData] = useState<WerBinIchLobbyState | null>(null)
   const [gameData, setGameData] = useState<WerBinIchGameState | null>(null)
-  const [myName, setMyName] = useState('')
+  const [session, setSession] = useState<WerBinIchSession | null>(initialSession)
+  const [myName, setMyName] = useState(initialSession?.playerName || '')
   const [error, setError] = useState('')
+  const [reconnecting, setReconnecting] = useState(false)
+  const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState(0)
+  const sessionRef = useRef<WerBinIchSession | null>(initialSession)
+
+  const persistSession = (nextSession: WerBinIchSession | null) => {
+    sessionRef.current = nextSession
+    setSession(nextSession)
+    if (typeof window === 'undefined') return
+
+    if (!nextSession) {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      return
+    }
+
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession))
+  }
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000', {
@@ -30,25 +66,60 @@ export default function WerBinIchGame() {
 
     const handleLobbyUpdate = (data: WerBinIchLobbyState) => {
       setLobbyData(data)
+      const activeSession = sessionRef.current
+      const me = data.players.find(player => player.id === activeSession?.playerId)
+      if (activeSession && me) {
+        persistSession({
+          ...activeSession,
+          playerName: me.name,
+          lobbyCode: data.code,
+          reconnectDeadline: me.reconnectDeadline ?? null
+        })
+      }
       setScreen('lobby')
+      setReconnecting(false)
     }
 
     const handleGameState = (data: WerBinIchGameState) => {
       setGameData(data)
+      const activeSession = sessionRef.current
+      const me = data.players.find(player => player.id === activeSession?.playerId)
+      if (activeSession && me) {
+        persistSession({
+          ...activeSession,
+          playerName: me.name,
+          reconnectDeadline: me.reconnectDeadline ?? null
+        })
+      }
       setScreen('game')
+      setReconnecting(false)
     }
 
     const handleLobbyClosed = () => {
       setScreen('menu')
       setLobbyData(null)
       setGameData(null)
+      persistSession(null)
       setError('Die Lobby wurde geschlossen.')
+      setReconnecting(false)
     }
 
     const handleDisconnect = () => {
       setScreen('menu')
       setLobbyData(null)
       setGameData(null)
+      setReconnecting(false)
+
+      const activeSession = sessionRef.current
+      if (activeSession) {
+        persistSession({
+          ...activeSession,
+          reconnectDeadline: Date.now() + RECONNECT_GRACE_MS
+        })
+        setError('Verbindung zum Server verloren. Du kannst dich 60 Sekunden lang wiederverbinden.')
+        return
+      }
+
       setError('Verbindung zum Server verloren.')
     }
 
@@ -72,11 +143,33 @@ export default function WerBinIchGame() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!session?.reconnectDeadline) {
+      setReconnectSecondsLeft(0)
+      return
+    }
+
+    const updateCountdown = () => {
+      const seconds = Math.max(0, Math.ceil((session.reconnectDeadline! - Date.now()) / 1000))
+      setReconnectSecondsLeft(seconds)
+      if (seconds === 0) {
+        persistSession(null)
+      }
+    }
+
+    updateCountdown()
+    const timer = window.setInterval(updateCountdown, 1000)
+    return () => window.clearInterval(timer)
+  }, [session])
+
   const handleCreate = (name: string) => {
     if (!socket) return
     setMyName(name)
     setError('')
     socket.emit('lobby:create', name, (response?: WerBinIchAck) => {
+      if (response?.session) {
+        persistSession({ ...response.session, reconnectDeadline: null })
+      }
       if (response?.error) {
         setError(response.error)
       }
@@ -88,8 +181,29 @@ export default function WerBinIchGame() {
     setMyName(name)
     setError('')
     socket.emit('lobby:join', { name, code }, (response?: WerBinIchAck) => {
+      if (response?.session) {
+        persistSession({ ...response.session, reconnectDeadline: null })
+      }
       if (response?.error) {
         setError(response.error)
+      }
+    })
+  }
+
+  const handleReconnect = () => {
+    if (!socket || !session?.reconnectKey) return
+    setReconnecting(true)
+    setError('')
+    socket.emit('session:resume', session.reconnectKey, (response?: WerBinIchAck) => {
+      setReconnecting(false)
+      if (response?.error) {
+        persistSession(null)
+        setError(response.error)
+        return
+      }
+      if (response?.session) {
+        setMyName(response.session.playerName)
+        persistSession({ ...response.session, reconnectDeadline: null })
       }
     })
   }
@@ -101,7 +215,9 @@ export default function WerBinIchGame() {
     setScreen('menu')
     setLobbyData(null)
     setGameData(null)
+    persistSession(null)
     setError('')
+    setReconnecting(false)
   }
 
   return (
@@ -118,8 +234,14 @@ export default function WerBinIchGame() {
             socketConnected={!!socket?.connected}
             onCreateLobby={handleCreate}
             onJoinLobby={handleJoin}
+            onReconnect={handleReconnect}
             error={error}
             clearError={() => setError('')}
+            reconnectAvailable={!!session?.reconnectDeadline && reconnectSecondsLeft > 0}
+            reconnectSecondsLeft={reconnectSecondsLeft}
+            reconnecting={reconnecting}
+            reconnectPlayerName={session?.playerName}
+            reconnectLobbyCode={session?.lobbyCode}
           />
         )}
 
@@ -127,6 +249,7 @@ export default function WerBinIchGame() {
           <Lobby
             socket={socket}
             lobby={lobbyData}
+            selfPlayerId={session?.playerId || null}
             error={error}
             onError={setError}
             onLeave={handleLeave}

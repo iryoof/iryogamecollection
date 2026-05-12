@@ -179,7 +179,9 @@ export default function Game({ socket, game, myName, onLeave }: GameProps) {
                   }`}
                 >
                   <div className="space-y-1">
-                    <p className="section-kicker">{player.solved ? 'Gelöst' : 'Offen'}</p>
+                    <p className="section-kicker">
+                      {player.isDisconnected ? 'Getrennt' : player.solved ? 'Gelöst' : 'Offen'}
+                    </p>
                     <h3 className="text-xl font-semibold text-white">{player.name}</h3>
                   </div>
                   <div className="min-h-[3rem] text-lg font-semibold text-zinc-200 break-words">
@@ -235,11 +237,18 @@ export default function Game({ socket, game, myName, onLeave }: GameProps) {
                     className="surface-panel-strong rounded-[1.25rem] px-4 py-4 flex items-center justify-between gap-3"
                   >
                     <span className="font-semibold text-zinc-100">{player.name}</span>
-                    {player.isHost && (
-                      <span className="status-chip border-white/18 bg-white/10 text-zinc-100">
-                        Host
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {player.isDisconnected && (
+                        <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-200">
+                          Getrennt
+                        </span>
+                      )}
+                      {player.isHost && (
+                        <span className="status-chip border-white/18 bg-white/10 text-zinc-100">
+                          Host
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

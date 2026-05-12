@@ -4,13 +4,14 @@ import type { WerBinIchAck, WerBinIchLobbyState } from './types'
 interface LobbyProps {
   socket: Socket
   lobby: WerBinIchLobbyState
+  selfPlayerId: string | null
   error: string
   onError: (message: string) => void
   onLeave: () => void
 }
 
-export default function Lobby({ socket, lobby, error, onError, onLeave }: LobbyProps) {
-  const me = lobby.players.find(player => player.id === socket.id)
+export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onLeave }: LobbyProps) {
+  const me = lobby.players.find(player => player.id === selfPlayerId)
   const isHost = !!me?.isHost
 
   const handleStart = () => {
@@ -56,7 +57,7 @@ export default function Lobby({ socket, lobby, error, onError, onLeave }: LobbyP
                 <div
                   key={player.id}
                   className={`surface-panel-strong rounded-[1.25rem] px-4 py-4 text-sm ${
-                    player.id === socket.id ? 'border-white/30 bg-white/[0.07]' : ''
+                    player.id === selfPlayerId ? 'border-white/30 bg-white/[0.07]' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -69,7 +70,12 @@ export default function Lobby({ socket, lobby, error, onError, onLeave }: LobbyP
                           Host
                         </span>
                       )}
-                      {player.id === socket.id && (
+                      {player.isDisconnected && (
+                        <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-200">
+                          Getrennt
+                        </span>
+                      )}
+                      {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
                       )}
                     </div>

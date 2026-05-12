@@ -1,9 +1,22 @@
-﻿import { Server as SocketIOServer, Socket } from 'socket.io'
+import { randomUUID } from 'node:crypto'
+import { Server as SocketIOServer, Socket } from 'socket.io'
+
+const RECONNECT_GRACE_MS = 60_000
+
+interface WerBinIchSession {
+  playerId: string
+  reconnectKey: string
+  lobbyCode: string
+  playerName: string
+  reconnectDeadline: number | null
+}
 
 interface WerBinIchPlayer {
   id: string
   name: string
   isHost: boolean
+  reconnectKey: string
+  reconnectDeadline: number | null
 }
 
 interface WerBinIchWordEntry {
@@ -32,9 +45,11 @@ interface AckPayload {
   word?: string
   authorName?: string
   error?: string
+  session?: WerBinIchSession
 }
 
 const werBinIchLobbies = new Map<string, WerBinIchLobby>()
+const evictionTimers = new Map<string, NodeJS.Timeout>()
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -45,15 +60,30 @@ function generateCode(): string {
   return code
 }
 
-function createLobby(hostSocket: Socket, hostName: string): WerBinIchLobby {
+function cancelEviction(playerId: string) {
+  const timer = evictionTimers.get(playerId)
+  if (!timer) return
+  clearTimeout(timer)
+  evictionTimers.delete(playerId)
+}
+
+function createLobby(hostSocket: Socket, hostName: string): { lobby: WerBinIchLobby; player: WerBinIchPlayer } {
   let code = generateCode()
   while (werBinIchLobbies.has(code)) {
     code = generateCode()
   }
 
+  const hostPlayer: WerBinIchPlayer = {
+    id: randomUUID(),
+    name: hostName,
+    isHost: true,
+    reconnectKey: randomUUID(),
+    reconnectDeadline: null
+  }
+
   const lobby: WerBinIchLobby = {
     code,
-    players: [{ id: hostSocket.id, name: hostName, isHost: true }],
+    players: [hostPlayer],
     state: 'waiting',
     assignments: {},
     words: {},
@@ -62,31 +92,63 @@ function createLobby(hostSocket: Socket, hostName: string): WerBinIchLobby {
   }
 
   werBinIchLobbies.set(code, lobby)
-  return lobby
+  return { lobby, player: hostPlayer }
 }
 
-function findLobbyByPlayer(socketId: string): WerBinIchLobby | null {
+function buildSession(lobby: WerBinIchLobby, player: WerBinIchPlayer): WerBinIchSession {
+  return {
+    playerId: player.id,
+    reconnectKey: player.reconnectKey,
+    lobbyCode: lobby.code,
+    playerName: player.name,
+    reconnectDeadline: player.reconnectDeadline
+  }
+}
+
+function bindSocketToPlayer(socket: Socket, lobby: WerBinIchLobby, player: WerBinIchPlayer) {
+  socket.data.werBinIchPlayerId = player.id
+  socket.data.werBinIchReconnectKey = player.reconnectKey
+  socket.join(player.id)
+  socket.join(lobby.code)
+}
+
+function findLobbyByPlayerId(playerId: string): WerBinIchLobby | null {
   for (const lobby of werBinIchLobbies.values()) {
-    if (lobby.players.some(player => player.id === socketId)) {
+    if (lobby.players.some(player => player.id === playerId)) {
       return lobby
     }
   }
   return null
 }
 
-function broadcastLobby(io: SocketIOServer, lobby: WerBinIchLobby) {
-  const sanitized = {
+function findPlayerByReconnectKey(reconnectKey: string): { lobby: WerBinIchLobby; player: WerBinIchPlayer } | null {
+  for (const lobby of werBinIchLobbies.values()) {
+    const player = lobby.players.find(entry => entry.reconnectKey === reconnectKey)
+    if (player) {
+      return { lobby, player }
+    }
+  }
+  return null
+}
+
+function buildLobbyState(lobby: WerBinIchLobby) {
+  return {
     code: lobby.code,
     state: lobby.state,
     players: lobby.players.map(player => ({
       id: player.id,
       name: player.name,
-      isHost: player.isHost
+      isHost: player.isHost,
+      isDisconnected: !!player.reconnectDeadline,
+      reconnectDeadline: player.reconnectDeadline
     }))
   }
+}
 
+function broadcastLobby(io: SocketIOServer, lobby: WerBinIchLobby) {
+  const payload = buildLobbyState(lobby)
   lobby.players.forEach(player => {
-    io.to(player.id).emit('lobby:update', sanitized)
+    io.to(player.id).emit('lobby:update', payload)
   })
 }
 
@@ -112,61 +174,84 @@ function assignPlayers(lobby: WerBinIchLobby) {
   })
 }
 
-function broadcastGameState(io: SocketIOServer, lobby: WerBinIchLobby) {
-  lobby.players.forEach(player => {
-    const others = lobby.players
-      .filter(otherPlayer => otherPlayer.id !== player.id)
-      .map(otherPlayer => {
-        const wordEntry = lobby.words[otherPlayer.id]
-        return {
-          id: otherPlayer.id,
-          name: otherPlayer.name,
-          word: wordEntry ? wordEntry.word : null,
-          solved: !!lobby.solved[otherPlayer.id]
-        }
-      })
-
-    const solvedInfo = lobby.solvedInfo[player.id] || null
-    const myAssignmentTarget = lobby.assignments[player.id]
-    const targetWordExists = myAssignmentTarget ? !!lobby.words[myAssignmentTarget] : true
-
-    io.to(player.id).emit('game:state', {
-      state: lobby.state,
-      others,
-      myWord: lobby.solved[player.id] && solvedInfo ? solvedInfo.word : null,
-      myWordAuthor: lobby.solved[player.id] && solvedInfo ? solvedInfo.authorName : null,
-      iSolved: !!lobby.solved[player.id],
-      needsToWrite: lobby.state === 'writing' && !targetWordExists,
-      writeForPlayer: myAssignmentTarget
-        ? lobby.players.find(otherPlayer => otherPlayer.id === myAssignmentTarget)?.name || null
-        : null,
-      writeForPlayerId: myAssignmentTarget || null,
-      allWordsWritten: checkAllWordsWritten(lobby),
-      isHost: player.isHost,
-      players: lobby.players.map(otherPlayer => ({
+function buildGameState(lobby: WerBinIchLobby, player: WerBinIchPlayer) {
+  const others = lobby.players
+    .filter(otherPlayer => otherPlayer.id !== player.id)
+    .map(otherPlayer => {
+      const wordEntry = lobby.words[otherPlayer.id]
+      return {
         id: otherPlayer.id,
         name: otherPlayer.name,
-        isHost: otherPlayer.isHost
-      }))
+        word: wordEntry ? wordEntry.word : null,
+        solved: !!lobby.solved[otherPlayer.id],
+        isDisconnected: !!otherPlayer.reconnectDeadline,
+        reconnectDeadline: otherPlayer.reconnectDeadline
+      }
     })
+
+  const solvedInfo = lobby.solvedInfo[player.id] || null
+  const myAssignmentTarget = lobby.assignments[player.id]
+  const targetWordExists = myAssignmentTarget ? !!lobby.words[myAssignmentTarget] : true
+
+  return {
+    state: lobby.state,
+    others,
+    myWord: lobby.solved[player.id] && solvedInfo ? solvedInfo.word : null,
+    myWordAuthor: lobby.solved[player.id] && solvedInfo ? solvedInfo.authorName : null,
+    iSolved: !!lobby.solved[player.id],
+    needsToWrite: lobby.state === 'writing' && !targetWordExists,
+    writeForPlayer: myAssignmentTarget
+      ? lobby.players.find(otherPlayer => otherPlayer.id === myAssignmentTarget)?.name || null
+      : null,
+    writeForPlayerId: myAssignmentTarget || null,
+    allWordsWritten: checkAllWordsWritten(lobby),
+    isHost: player.isHost,
+    players: lobby.players.map(otherPlayer => ({
+      id: otherPlayer.id,
+      name: otherPlayer.name,
+      isHost: otherPlayer.isHost,
+      isDisconnected: !!otherPlayer.reconnectDeadline,
+      reconnectDeadline: otherPlayer.reconnectDeadline
+    }))
+  }
+}
+
+function broadcastGameState(io: SocketIOServer, lobby: WerBinIchLobby) {
+  lobby.players.forEach(player => {
+    io.to(player.id).emit('game:state', buildGameState(lobby, player))
   })
 }
 
-function handleDisconnect(io: SocketIOServer, socket: Socket) {
-  const lobby = findLobbyByPlayer(socket.id)
-  if (!lobby) return
+function removePlayerFromLobby(io: SocketIOServer, lobby: WerBinIchLobby, playerId: string) {
+  const leavingPlayer = lobby.players.find(player => player.id === playerId)
+  if (!leavingPlayer) return
 
-  const leavingPlayer = lobby.players.find(player => player.id === socket.id)
-  const wasHost = leavingPlayer?.isHost
-  lobby.players = lobby.players.filter(player => player.id !== socket.id)
+  cancelEviction(playerId)
+  const wasHost = leavingPlayer.isHost
+  lobby.players = lobby.players.filter(player => player.id !== playerId)
+
+  delete lobby.assignments[playerId]
+  delete lobby.words[playerId]
+  delete lobby.solved[playerId]
+  delete lobby.solvedInfo[playerId]
+
+  for (const [assignee, target] of Object.entries(lobby.assignments)) {
+    if (target === playerId) {
+      delete lobby.assignments[assignee]
+    }
+  }
 
   if (lobby.players.length === 0) {
     werBinIchLobbies.delete(lobby.code)
     return
   }
 
-  if (wasHost && lobby.players.length > 0) {
+  if (wasHost) {
     lobby.players[0].isHost = true
+  }
+
+  if (lobby.state === 'writing' && checkAllWordsWritten(lobby)) {
+    lobby.state = 'playing'
   }
 
   if (lobby.state === 'waiting') {
@@ -174,18 +259,40 @@ function handleDisconnect(io: SocketIOServer, socket: Socket) {
     return
   }
 
-  delete lobby.assignments[socket.id]
-  delete lobby.words[socket.id]
-  delete lobby.solved[socket.id]
-  delete lobby.solvedInfo[socket.id]
+  broadcastGameState(io, lobby)
+}
 
-  for (const [assignee, target] of Object.entries(lobby.assignments)) {
-    if (target === socket.id) {
-      delete lobby.assignments[assignee]
-    }
+function scheduleEviction(io: SocketIOServer, lobbyCode: string, playerId: string) {
+  cancelEviction(playerId)
+  const timer = setTimeout(() => {
+    evictionTimers.delete(playerId)
+    const lobby = werBinIchLobbies.get(lobbyCode)
+    if (!lobby) return
+    const player = lobby.players.find(entry => entry.id === playerId)
+    if (!player || !player.reconnectDeadline || player.reconnectDeadline > Date.now()) return
+    removePlayerFromLobby(io, lobby, playerId)
+  }, RECONNECT_GRACE_MS)
+  evictionTimers.set(playerId, timer)
+}
+
+function markPlayerDisconnected(io: SocketIOServer, lobby: WerBinIchLobby, playerId: string) {
+  const player = lobby.players.find(entry => entry.id === playerId)
+  if (!player || player.reconnectDeadline) return
+
+  player.reconnectDeadline = Date.now() + RECONNECT_GRACE_MS
+  scheduleEviction(io, lobby.code, playerId)
+
+  if (lobby.state === 'waiting') {
+    broadcastLobby(io, lobby)
+    return
   }
 
   broadcastGameState(io, lobby)
+}
+
+function clearPlayerReconnectState(player: WerBinIchPlayer) {
+  player.reconnectDeadline = null
+  cancelEviction(player.id)
 }
 
 export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
@@ -196,10 +303,10 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         return
       }
 
-      const lobby = createLobby(socket, name.trim())
-      socket.join(lobby.code)
+      const { lobby, player } = createLobby(socket, name.trim())
+      bindSocketToPlayer(socket, lobby, player)
       broadcastLobby(io, lobby)
-      callback?.({ code: lobby.code })
+      callback?.({ code: lobby.code, session: buildSession(lobby, player) })
     })
 
     socket.on(
@@ -233,21 +340,66 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           return
         }
 
-        lobby.players.push({ id: socket.id, name: name.trim(), isHost: false })
-        socket.join(lobby.code)
+        const player: WerBinIchPlayer = {
+          id: randomUUID(),
+          name: name.trim(),
+          isHost: false,
+          reconnectKey: randomUUID(),
+          reconnectDeadline: null
+        }
+
+        lobby.players.push(player)
+        bindSocketToPlayer(socket, lobby, player)
         broadcastLobby(io, lobby)
-        callback?.({ code: lobby.code })
+        callback?.({ code: lobby.code, session: buildSession(lobby, player) })
       }
     )
 
+    socket.on('session:resume', (reconnectKey: string, callback?: (payload: AckPayload) => void) => {
+      if (!reconnectKey || typeof reconnectKey !== 'string') {
+        callback?.({ error: 'Reconnect-Schluessel fehlt.' })
+        return
+      }
+
+      const match = findPlayerByReconnectKey(reconnectKey)
+      if (!match) {
+        callback?.({ error: 'Reconnect-Fenster abgelaufen oder Session ungueltig.' })
+        return
+      }
+
+      const { lobby, player } = match
+      if (player.reconnectDeadline && player.reconnectDeadline <= Date.now()) {
+        removePlayerFromLobby(io, lobby, player.id)
+        callback?.({ error: 'Reconnect-Fenster abgelaufen.' })
+        return
+      }
+
+      clearPlayerReconnectState(player)
+      bindSocketToPlayer(socket, lobby, player)
+
+      if (lobby.state === 'waiting') {
+        broadcastLobby(io, lobby)
+      } else {
+        broadcastGameState(io, lobby)
+      }
+
+      callback?.({ ok: true, session: buildSession(lobby, player) })
+    })
+
     socket.on('game:start', (callback?: (payload: AckPayload) => void) => {
-      const lobby = findLobbyByPlayer(socket.id)
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) {
+        callback?.({ error: 'Lobby nicht gefunden.' })
+        return
+      }
+
+      const lobby = findLobbyByPlayerId(playerId)
       if (!lobby) {
         callback?.({ error: 'Lobby nicht gefunden.' })
         return
       }
 
-      const player = lobby.players.find(entry => entry.id === socket.id)
+      const player = lobby.players.find(entry => entry.id === playerId)
       if (!player?.isHost) {
         callback?.({ error: 'Nur der Host kann das Spiel starten.' })
         return
@@ -272,7 +424,13 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         payload: { word: string },
         callback?: (response: AckPayload) => void
       ) => {
-        const lobby = findLobbyByPlayer(socket.id)
+        const playerId = socket.data.werBinIchPlayerId as string | undefined
+        if (!playerId) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+
+        const lobby = findLobbyByPlayerId(playerId)
         if (!lobby) {
           callback?.({ error: 'Lobby nicht gefunden.' })
           return
@@ -284,13 +442,13 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           return
         }
 
-        const targetId = lobby.assignments[socket.id]
+        const targetId = lobby.assignments[playerId]
         if (!targetId) {
           callback?.({ error: 'Kein Ziel zugewiesen.' })
           return
         }
 
-        lobby.words[targetId] = { word, authorId: socket.id }
+        lobby.words[targetId] = { word, authorId: playerId }
         callback?.({ ok: true })
 
         if (checkAllWordsWritten(lobby)) {
@@ -301,21 +459,27 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
     )
 
     socket.on('game:solve', (callback?: (payload: AckPayload) => void) => {
-      const lobby = findLobbyByPlayer(socket.id)
-      if (!lobby || lobby.state !== 'playing') {
-        callback?.({ error: 'Spiel läuft nicht.' })
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) {
+        callback?.({ error: 'Spiel laeuft nicht.' })
         return
       }
 
-      const wordEntry = lobby.words[socket.id]
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby || lobby.state !== 'playing') {
+        callback?.({ error: 'Spiel laeuft nicht.' })
+        return
+      }
+
+      const wordEntry = lobby.words[playerId]
       if (!wordEntry) {
         callback?.({ error: 'Kein Wort vorhanden.' })
         return
       }
 
-      lobby.solved[socket.id] = true
+      lobby.solved[playerId] = true
       const author = lobby.players.find(player => player.id === wordEntry.authorId)
-      lobby.solvedInfo[socket.id] = {
+      lobby.solvedInfo[playerId] = {
         word: wordEntry.word,
         authorName: author ? author.name : 'Unbekannt'
       }
@@ -330,9 +494,15 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         payload: { targetId: string; word: string },
         callback?: (response: AckPayload) => void
       ) => {
-        const lobby = findLobbyByPlayer(socket.id)
+        const playerId = socket.data.werBinIchPlayerId as string | undefined
+        if (!playerId) {
+          callback?.({ error: 'Spiel laeuft nicht.' })
+          return
+        }
+
+        const lobby = findLobbyByPlayerId(playerId)
         if (!lobby || lobby.state !== 'playing') {
-          callback?.({ error: 'Spiel läuft nicht.' })
+          callback?.({ error: 'Spiel laeuft nicht.' })
           return
         }
 
@@ -346,12 +516,12 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           callback?.({ error: 'Spieler nicht gefunden.' })
           return
         }
-        if (targetId === socket.id) {
+        if (targetId === playerId) {
           callback?.({ error: 'Du kannst dir nicht selbst ein Wort geben.' })
           return
         }
 
-        lobby.words[targetId] = { word, authorId: socket.id }
+        lobby.words[targetId] = { word, authorId: playerId }
         lobby.solved[targetId] = false
         lobby.solvedInfo[targetId] = null
 
@@ -361,23 +531,39 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
     )
 
     socket.on('lobby:leave', () => {
-      handleDisconnect(io, socket)
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) return
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby) return
+      removePlayerFromLobby(io, lobby, playerId)
     })
 
     socket.on('lobby:close', () => {
-      const lobby = findLobbyByPlayer(socket.id)
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) return
+
+      const lobby = findLobbyByPlayerId(playerId)
       if (!lobby) return
-      const player = lobby.players.find(entry => entry.id === socket.id)
+      const player = lobby.players.find(entry => entry.id === playerId)
       if (!player?.isHost) return
 
       lobby.players.forEach(entry => {
+        cancelEviction(entry.id)
         io.to(entry.id).emit('lobby:closed')
       })
       werBinIchLobbies.delete(lobby.code)
     })
 
     socket.on('disconnect', () => {
-      handleDisconnect(io, socket)
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) return
+
+      const room = io.sockets.adapter.rooms.get(playerId)
+      if (room && room.size > 0) return
+
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby) return
+      markPlayerDisconnected(io, lobby, playerId)
     })
   })
 }

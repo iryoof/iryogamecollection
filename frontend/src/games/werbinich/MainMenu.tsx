@@ -5,8 +5,14 @@ interface MainMenuProps {
   socketConnected: boolean
   onCreateLobby: (name: string) => void
   onJoinLobby: (name: string, code: string) => void
+  onReconnect: () => void
   error: string
   clearError: () => void
+  reconnectAvailable: boolean
+  reconnectSecondsLeft: number
+  reconnecting: boolean
+  reconnectPlayerName?: string
+  reconnectLobbyCode?: string
 }
 
 const RAPPER_NAMES = [
@@ -41,8 +47,14 @@ export default function MainMenu({
   socketConnected,
   onCreateLobby,
   onJoinLobby,
+  onReconnect,
   error,
-  clearError
+  clearError,
+  reconnectAvailable,
+  reconnectSecondsLeft,
+  reconnecting,
+  reconnectPlayerName,
+  reconnectLobbyCode
 }: MainMenuProps) {
   const [mode, setMode] = useState<null | 'create' | 'join'>(null)
   const [name, setName] = useState('')
@@ -96,6 +108,27 @@ export default function MainMenu({
         <div className="screen-shell rounded-[2rem] p-6 md:p-8">
           {!mode ? (
             <div className="space-y-4 animate-fade-in">
+              {reconnectAvailable && (
+                <div className="surface-panel rounded-[1.5rem] p-4 space-y-3">
+                  <div className="text-center space-y-1">
+                    <p className="section-kicker">Reconnect</p>
+                    <p className="text-sm text-zinc-300">
+                      {reconnectPlayerName || 'Letzte Session'} in Lobby{' '}
+                      <span className="text-zinc-100">{reconnectLobbyCode || '-----'}</span>
+                    </p>
+                    <p className="text-xs text-zinc-500 font-mono-ui uppercase tracking-[0.14em]">
+                      Verfügbar für {reconnectSecondsLeft}s
+                    </p>
+                  </div>
+                  <button
+                    onClick={onReconnect}
+                    disabled={!socketConnected || reconnecting}
+                    className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {reconnecting ? 'Verbinde...' : 'Wiederverbinden'}
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => {
                   setMode('create')
@@ -193,3 +226,4 @@ export default function MainMenu({
     </div>
   )
 }
+

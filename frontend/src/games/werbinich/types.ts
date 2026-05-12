@@ -4,6 +4,8 @@ export interface WerBinIchPlayer {
   id: string
   name: string
   isHost: boolean
+  isDisconnected?: boolean
+  reconnectDeadline?: number | null
 }
 
 export interface WerBinIchLobbyState {
@@ -17,6 +19,8 @@ export interface WerBinIchOtherPlayer {
   name: string
   word: string | null
   solved: boolean
+  isDisconnected?: boolean
+  reconnectDeadline?: number | null
 }
 
 export interface WerBinIchGameState {
@@ -39,4 +43,13 @@ export interface WerBinIchAck {
   word?: string
   authorName?: string
   error?: string
+  session?: WerBinIchSession
+}
+
+export interface WerBinIchSession {
+  playerId: string
+  reconnectKey: string
+  lobbyCode: string
+  playerName: string
+  reconnectDeadline: number | null
 }
