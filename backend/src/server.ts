@@ -1,9 +1,10 @@
-import express, { Express, NextFunction, Request, Response } from 'express'
+﻿import express, { Express, NextFunction, Request, Response } from 'express'
 import { createServer } from 'http'
 import { Server as SocketIOServer } from 'socket.io'
 import cors from 'cors'
 import { GameManager } from './game/GameManager'
 import { setupSocketHandlers } from './io'
+import { setupWerBinIchSocketHandlers } from './werbinich'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -51,20 +52,21 @@ app.get('/api/stats', (req: Request, res: Response) => {
 
 // Socket.io Events
 setupSocketHandlers(io, gameManager)
+setupWerBinIchSocketHandlers(io)
 
-// Error handling — must be the last middleware. Express only treats this as
+// Error handling â€” must be the last middleware. Express only treats this as
 // an error handler when the function has exactly 4 parameters; with 3, it is
 // registered as regular middleware and crashes every request because `res` is
 // then the next() function, not the response object.
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-  console.error('❌ Error:', err)
+  console.error('âŒ Error:', err)
   res.status(500).json({ error: 'Internal Server Error' })
 })
 
 // Start Server
 httpServer.listen(port, () => {
-  console.log('🚀 Server running on http://localhost:' + port)
-  console.log('📡 WebSocket ready for connections')
+  console.log('ðŸš€ Server running on http://localhost:' + port)
+  console.log('ðŸ“¡ WebSocket ready for connections')
 })
 
 // Graceful shutdown
@@ -77,3 +79,4 @@ process.on('SIGTERM', () => {
 })
 
 export { app, io, gameManager }
+

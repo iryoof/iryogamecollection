@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import { PageType } from '../types'
 import type { GameSocketApi } from '../hooks/useGameSocket'
@@ -285,7 +285,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl border-2 border-white/30 backdrop-blur-sm transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              🌍 {t('language')}
+              {t('language')}
             </button>
             {showLanguageDropdown && (
               <div className="absolute bottom-full right-0 mb-3 bg-black/95 border-2 border-white/20 rounded-xl backdrop-blur-sm min-w-[140px] shadow-2xl">
@@ -293,19 +293,19 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   onClick={() => changeLanguage('de')}
                   className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 first:rounded-t-xl transition-colors font-medium"
                 >
-                  🇩🇪 Deutsch
+                  Deutsch
                 </button>
                 <button
                   onClick={() => changeLanguage('en')}
                   className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 transition-colors font-medium"
                 >
-                  🇬🇧 English
+                  English
                 </button>
                 <button
                   onClick={() => changeLanguage('fr')}
                   className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 last:rounded-b-xl transition-colors font-medium"
                 >
-                  🇫🇷 Français
+                  Français
                 </button>
               </div>
             )}
@@ -315,3 +315,4 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
     </div>
   )
 }
+

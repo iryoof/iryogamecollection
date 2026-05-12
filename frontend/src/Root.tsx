@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import GamePortal from './pages/GamePortal'
 import CypherGame from './pages/CypherGame'
-import ComingSoon from './pages/ComingSoon'
+import WerBinIchGame from './pages/WerBinIchGame'
 
 export default function Root() {
   return (
@@ -9,7 +9,7 @@ export default function Root() {
       <Routes>
         <Route path="/" element={<GamePortal />} />
         <Route path="/cypher/*" element={<CypherGame />} />
-        <Route path="/werbinich" element={<ComingSoon />} />
+        <Route path="/werbinich/*" element={<WerBinIchGame />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
