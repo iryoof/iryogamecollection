@@ -10,8 +10,10 @@
     "lint": "eslint src --ext ts,tsx || true"
   },
   "dependencies": {
+    "i18next": "^26.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-i18next": "^17.0.7",
     "socket.io-client": "^4.7.2"
   },
   "devDependencies": {

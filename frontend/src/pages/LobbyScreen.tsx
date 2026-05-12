@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import { PageType } from '../App'
 import type { GameSocketApi } from '../hooks/useGameSocket'
+import { useTranslation } from 'react-i18next'
 
 const RAPPER_NAMES = [
   'Kollegah',
@@ -37,6 +38,7 @@ interface LobbyScreenProps {
 }
 
 export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onInviteCodeConsumed }: LobbyScreenProps) {
+  const { t, i18n } = useTranslation()
   const { gameState, error, loading, joinLobby, createLobby } = game
   const [nickname, setNickname] = useState(() => {
     if (typeof window === 'undefined') return ''
@@ -46,8 +48,9 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
   const [step, setStep] = useState<'menu' | 'join' | 'create'>('menu')
   const [localError, setLocalError] = useState('')
   const [pendingNavigation, setPendingNavigation] = useState(false)
-  const [createPlaceholder, setCreatePlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
-  const [joinPlaceholder, setJoinPlaceholder] = useState(() => `z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+  const [createPlaceholder, setCreatePlaceholder] = useState('')
+  const [joinPlaceholder, setJoinPlaceholder] = useState('')
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
 
   // If the user arrived via an invite link (`?code=ABC123`), drop them
   // directly onto the join form with the code prefilled.
@@ -67,13 +70,18 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
     }
   }, [gameState, pendingNavigation, onNavigate])
 
+  useEffect(() => {
+    setCreatePlaceholder(`${t('example')} ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+    setJoinPlaceholder(`${t('example')} ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+  }, [t])
+
   const handleCreateLobby = () => {
     if (!nickname.trim()) {
-      setLocalError('Nickname erforderlich!')
+      setLocalError(t('nicknameRequired'))
       return
     }
     if (!socket?.connected) {
-      setLocalError('Keine Verbindung zum Server!')
+      setLocalError(t('noConnection'))
       return
     }
     setLocalError('')
@@ -83,15 +91,15 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
 
   const handleJoinLobby = () => {
     if (!nickname.trim()) {
-      setLocalError('Nickname erforderlich!')
+      setLocalError(t('nicknameRequired'))
       return
     }
     if (!joinCode.trim()) {
-      setLocalError('Lobby-Code erforderlich!')
+      setLocalError(t('codeRequired'))
       return
     }
     if (!socket?.connected) {
-      setLocalError('Keine Verbindung zum Server!')
+      setLocalError(t('noConnection'))
       return
     }
     setLocalError('')
@@ -101,18 +109,23 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
 
   const displayError = localError || error
 
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng)
+    setShowLanguageDropdown(false)
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
       <div className="w-full max-w-xl space-y-8">
         <div className="text-center space-y-5">
-          <p className="section-kicker">Underground Word Relay</p>
+          <p className="section-kicker">{t('undergroundWordRelay')}</p>
           <div className="space-y-3">
-            <h1 className="hero-title text-[clamp(3.4rem,12vw,6.8rem)] leading-none">Cypher</h1>
+            <h1 className="hero-title text-[clamp(3.4rem,12vw,6.8rem)] leading-none">{t('cypher')}</h1>
           </div>
           {!socket?.connected && (
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono-ui uppercase tracking-[0.18em] text-zinc-400">
               <span className="h-2 w-2 rounded-full bg-white/40 animate-pulse-line" />
-              Server-Verbindung wird hergestellt
+              {t('connecting')}
             </div>
           )}
         </div>
@@ -122,31 +135,31 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
             <div className="space-y-4 animate-fade-in">
               <button
                 onClick={() => {
-                  setCreatePlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+                  setCreatePlaceholder(`${t('example')} ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
                   setStep('create')
                   setLocalError('')
                 }}
                 disabled={!socket?.connected || loading}
                 className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Neues Spiel erstellen
+                {t('createNewGame')}
               </button>
               <button
                 onClick={() => {
-                  setJoinPlaceholder(`z.B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
+                  setJoinPlaceholder(`${t('example')} ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`)
                   setStep('join')
                   setLocalError('')
                 }}
                 disabled={!socket?.connected || loading}
                 className="action-secondary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Spiel beitreten
+                {t('joinGame')}
               </button>
               <button
                 onClick={() => onNavigate('archive')}
                 className="action-ghost w-full px-6 py-4 text-sm"
               >
-                Archiv ansehen
+                {t('viewArchive')}
               </button>
             </div>
           )}
@@ -154,12 +167,12 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
           {step === 'create' && (
             <div className="space-y-5 animate-fade-in">
               <div className="space-y-2 text-center">
-                <p className="section-kicker">Create Lobby</p>
-                <h3 className="text-3xl font-semibold text-white">Neue Session</h3>
+                <p className="section-kicker">{t('createLobby')}</p>
+                <h3 className="text-3xl font-semibold text-white">{t('newSession')}</h3>
               </div>
 
               <div className="space-y-2">
-                <label className="section-kicker">Dein Nickname</label>
+                <label className="section-kicker">{t('yourNickname')}</label>
                 <input
                   type="text"
                   value={nickname}
@@ -184,7 +197,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   disabled={loading || !socket?.connected}
                   className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Erstelle...' : 'Spiel erstellen'}
+                  {loading ? t('creating') : t('createGame')}
                 </button>
 
                 <button
@@ -195,7 +208,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zurück
+                  {t('back')}
                 </button>
               </div>
             </div>
@@ -204,12 +217,12 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
           {step === 'join' && (
             <div className="space-y-5 animate-fade-in">
               <div className="space-y-2 text-center">
-                <p className="section-kicker">Join Lobby</p>
-                <h3 className="text-3xl font-semibold text-white">In die Session rein</h3>
+                <p className="section-kicker">{t('joinLobby')}</p>
+                <h3 className="text-3xl font-semibold text-white">{t('joinSession')}</h3>
               </div>
 
               <div className="space-y-2">
-                <label className="section-kicker">Dein Nickname</label>
+                <label className="section-kicker">{t('yourNickname')}</label>
                 <input
                   type="text"
                   value={nickname}
@@ -223,13 +236,13 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
               </div>
 
               <div className="space-y-2">
-                <label className="section-kicker">Lobby-Code</label>
+                <label className="section-kicker">{t('lobbyCode')}</label>
                 <input
                   type="text"
                   value={joinCode}
                   onChange={event => setJoinCode(event.target.value.toUpperCase())}
                   maxLength={6}
-                  placeholder="z.B. ABC123"
+                  placeholder={t('exampleCode')}
                   className="display-code w-full rounded-2xl px-4 py-4 text-base placeholder:text-zinc-600"
                 />
               </div>
@@ -246,7 +259,7 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   disabled={loading || !socket?.connected}
                   className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Trete bei...' : 'Beitreten'}
+                  {loading ? t('joining') : t('join')}
                 </button>
 
                 <button
@@ -258,11 +271,45 @@ export default function LobbyScreen({ socket, onNavigate, game, inviteCode, onIn
                   }}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zurück
+                  {t('back')}
                 </button>
               </div>
             </div>
           )}
+        </div>
+
+        {/* Language Selector Button */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative">
+            <button
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="bg-black/80 hover:bg-black/90 text-white px-4 py-2 rounded-lg border border-white/10 backdrop-blur-sm transition-colors"
+            >
+              {t('language')}
+            </button>
+            {showLanguageDropdown && (
+              <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/10 rounded-lg backdrop-blur-sm min-w-[120px]">
+                <button
+                  onClick={() => changeLanguage('de')}
+                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 first:rounded-t-lg"
+                >
+                  Deutsch
+                </button>
+                <button
+                  onClick={() => changeLanguage('en')}
+                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => changeLanguage('fr')}
+                  className="block w-full text-left px-4 py-2 text-white hover:bg-white/10 last:rounded-b-lg"
+                >
+                  Français
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
