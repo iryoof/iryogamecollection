@@ -30,6 +30,10 @@ const readStoredSession = (): WerBinIchSession | null => {
 }
 
 export default function WerBinIchGame() {
+  useEffect(() => {
+    document.title = 'Wer bin ich'
+  }, [])
+
   const initialSession = readStoredSession()
   const [screen, setScreen] = useState<WerBinIchScreen>('menu')
   const [socket, setSocket] = useState<Socket | null>(null)

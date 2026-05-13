@@ -24,7 +24,37 @@ const readInviteCode = (): string => {
   return /^[A-Z0-9]{4,8}$/.test(code) ? code : ''
 }
 
+import { useEffect, useState } from 'react'
+import { io, Socket } from 'socket.io-client'
+import LobbyScreen from './LobbyScreen'
+import GameScreen from './GameScreen'
+import GameSetup from './GameSetup'
+import ArchiveScreen from './ArchiveScreen'
+import { useGameSocket } from '../hooks/useGameSocket'
+import '../styles/globals.css'
+
+export type PageType = 'menu' | 'lobby' | 'setup' | 'game' | 'archive'
+
+interface AppState {
+  currentPage: PageType
+  socket: Socket | null
+  sessionId: string | null
+}
+
+// Read a lobby code from the URL query string (e.g. `?code=ABC123`) so that
+// invite links can drop users directly into the join form.
+const readInviteCode = (): string => {
+  if (typeof window === 'undefined') return ''
+  const params = new URLSearchParams(window.location.search)
+  const code = (params.get('code') || '').trim().toUpperCase()
+  return /^[A-Z0-9]{4,8}$/.test(code) ? code : ''
+}
+
 export default function CypherGame() {
+  useEffect(() => {
+    document.title = 'Cypher'
+  }, [])
+
   const [appState, setAppState] = useState<AppState>({
     currentPage: 'menu',
     socket: null,

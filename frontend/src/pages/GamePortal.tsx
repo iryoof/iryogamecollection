@@ -1,9 +1,14 @@
 ﻿import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import LanguageSelector from '../components/LanguageSelector'
 
 export default function GamePortal() {
   const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = 'Iryo Game Collection'
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative">
