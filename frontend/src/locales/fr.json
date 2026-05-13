@@ -35,6 +35,7 @@
   "players": "Joueurs",
   "multilingual": "Multilingue",
   "play": "Jouer",
+  "play": "Jouer",
   "reconnectTitle": "Reconnecter",
   "lastSession": "Dernière session",
   "availableForSeconds": "Disponible pendant {{count}}s",

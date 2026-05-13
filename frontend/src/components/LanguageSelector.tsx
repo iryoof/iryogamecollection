@@ -33,19 +33,19 @@ export default function LanguageSelector() {
               onClick={() => changeLanguage('de')}
               className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 first:rounded-t-xl transition-colors font-medium"
             >
-              Deutsch
+              🇩🇪 Deutsch
             </button>
             <button
               onClick={() => changeLanguage('en')}
               className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 transition-colors font-medium"
             >
-              English
+              🇬🇧 English
             </button>
             <button
               onClick={() => changeLanguage('fr')}
               className="block w-full text-left px-4 py-3 text-white hover:bg-white/10 last:rounded-b-xl transition-colors font-medium"
             >
-              Français
+              🇫🇷 Français
             </button>
           </div>
         )}

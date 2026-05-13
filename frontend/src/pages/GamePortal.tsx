@@ -28,7 +28,7 @@ export default function GamePortal() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 group-hover:from-blue-500/20 group-hover:to-purple-500/20 transition-all duration-300" />
             <div className="relative z-10">
-              <div className="text-5xl mb-4">Mic</div>
+              <div className="text-5xl mb-4">🎤</div>
               <h2 className="text-3xl font-bold mb-2 text-white">{t('cypher')}</h2>
               <p className="text-white/80 mb-4">{t('undergroundWordRelay')}</p>
               <p className="text-sm text-white/60">{t('cypherDescription')}</p>
@@ -44,7 +44,7 @@ export default function GamePortal() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-red-500/10 group-hover:from-amber-500/20 group-hover:to-red-500/20 transition-all duration-300" />
             <div className="relative z-10">
-              <div className="text-5xl mb-4">?</div>
+              <div className="text-5xl mb-4">❓</div>
               <h2 className="text-3xl font-bold mb-2 text-white">{t('werBinIch')}</h2>
               <p className="text-white/80 mb-4">{t('riddleGame')}</p>
               <p className="text-sm text-white/60">{t('werBinIchDescription')}</p>
@@ -65,7 +65,7 @@ export default function GamePortal() {
             <p className="text-white/60 text-sm mt-1">{t('players')}</p>
           </div>
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-            <div className="text-2xl font-bold text-cyan-400">Lang</div>
+            <div className="text-2xl font-bold text-cyan-400">🌍</div>
             <p className="text-white/60 text-sm mt-1">{t('multilingual')}</p>
           </div>
         </div>
