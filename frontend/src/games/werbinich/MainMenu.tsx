@@ -1,5 +1,7 @@
 ﻿import { FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import LanguageSelector from '../../components/LanguageSelector'
 
 interface MainMenuProps {
   socketConnected: boolean
@@ -40,9 +42,6 @@ const RAPPER_NAMES = [
   'Rapido'
 ]
 
-const getRandomExampleName = () =>
-  `z. B. ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`
-
 export default function MainMenu({
   socketConnected,
   onCreateLobby,
@@ -56,6 +55,9 @@ export default function MainMenu({
   reconnectPlayerName,
   reconnectLobbyCode
 }: MainMenuProps) {
+  const { t } = useTranslation()
+  const getRandomExampleName = () =>
+    `${t('example')} ${RAPPER_NAMES[Math.floor(Math.random() * RAPPER_NAMES.length)]}`
   const [mode, setMode] = useState<null | 'create' | 'join'>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
@@ -63,7 +65,7 @@ export default function MainMenu({
 
   useEffect(() => {
     setPlaceholder(getRandomExampleName())
-  }, [mode])
+  }, [mode, t])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -88,19 +90,19 @@ export default function MainMenu({
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
       <div className="w-full max-w-xl space-y-8">
         <div className="text-center space-y-5">
-          <p className="section-kicker">Party Game</p>
+          <p className="section-kicker">{t('riddleGame')}</p>
           <div className="space-y-3">
             <h1 className="hero-title text-[clamp(2.9rem,11vw,6.2rem)] leading-none">
-              Wer bin ich?
+              {t('werBinIch')}
             </h1>
             <div className="flex justify-center">
-              <span className="splash-tag">Heimlich schreiben. Laut rätseln.</span>
+              <span className="splash-tag">{t('werBinIchTagline')}</span>
             </div>
           </div>
           {!socketConnected && (
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono-ui uppercase tracking-[0.18em] text-zinc-400">
               <span className="h-2 w-2 rounded-full bg-white/40 animate-pulse-line" />
-              Server-Verbindung wird hergestellt
+              {t('connecting')}
             </div>
           )}
         </div>
@@ -111,13 +113,13 @@ export default function MainMenu({
               {reconnectAvailable && (
                 <div className="surface-panel rounded-[1.5rem] p-4 space-y-3">
                   <div className="text-center space-y-1">
-                    <p className="section-kicker">Reconnect</p>
+                    <p className="section-kicker">{t('reconnectTitle')}</p>
                     <p className="text-sm text-zinc-300">
-                      {reconnectPlayerName || 'Letzte Session'} in Lobby{' '}
+                      {reconnectPlayerName || t('lastSession')} ·{' '}
                       <span className="text-zinc-100">{reconnectLobbyCode || '-----'}</span>
                     </p>
                     <p className="text-xs text-zinc-500 font-mono-ui uppercase tracking-[0.14em]">
-                      Verfügbar für {reconnectSecondsLeft}s
+                      {t('availableForSeconds', { count: reconnectSecondsLeft })}
                     </p>
                   </div>
                   <button
@@ -125,7 +127,7 @@ export default function MainMenu({
                     disabled={!socketConnected || reconnecting}
                     className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {reconnecting ? 'Verbinde...' : 'Wiederverbinden'}
+                    {reconnecting ? t('reconnecting') : t('reconnectNow')}
                   </button>
                 </div>
               )}
@@ -137,7 +139,7 @@ export default function MainMenu({
                 disabled={!socketConnected}
                 className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Lobby erstellen
+                {t('createLobby')}
               </button>
               <button
                 onClick={() => {
@@ -147,28 +149,28 @@ export default function MainMenu({
                 disabled={!socketConnected}
                 className="action-secondary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Lobby beitreten
+                {t('joinLobby')}
               </button>
               <Link
                 to="/"
                 className="action-ghost flex w-full items-center justify-center px-6 py-4 text-sm no-underline"
               >
-                Zurück zum Portal
+                {t('backToPortal')}
               </Link>
             </div>
           ) : (
             <form className="space-y-5 animate-fade-in" onSubmit={handleSubmit}>
               <div className="space-y-2 text-center">
                 <p className="section-kicker">
-                  {mode === 'create' ? 'Create Lobby' : 'Join Lobby'}
+                  {mode === 'create' ? t('createLobby') : t('joinLobby')}
                 </p>
                 <h3 className="text-3xl font-semibold text-white">
-                  {mode === 'create' ? 'Neue Runde' : 'In die Runde rein'}
+                  {mode === 'create' ? t('newRound') : t('joinSession')}
                 </h3>
               </div>
 
               <div className="space-y-2">
-                <label className="section-kicker">Dein Name</label>
+                <label className="section-kicker">{t('yourNickname')}</label>
                 <input
                   type="text"
                   placeholder={placeholder}
@@ -184,10 +186,10 @@ export default function MainMenu({
 
               {mode === 'join' && (
                 <div className="space-y-2">
-                  <label className="section-kicker">Lobby-Code</label>
+                  <label className="section-kicker">{t('lobbyCode')}</label>
                   <input
                     type="text"
-                    placeholder="z. B. A1B2C"
+                    placeholder={t('exampleCode')}
                     value={code}
                     onChange={event => setCode(event.target.value.toUpperCase())}
                     maxLength={5}
@@ -209,21 +211,22 @@ export default function MainMenu({
                   disabled={!socketConnected}
                   className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {mode === 'create' ? 'Erstellen' : 'Beitreten'}
+                  {mode === 'create' ? t('createGame') : t('join')}
                 </button>
                 <button
                   type="button"
                   onClick={handleBack}
                   className="action-secondary w-full px-6 py-4 text-sm"
                 >
-                  Zurück
+                  {t('back')}
                 </button>
               </div>
             </form>
           )}
         </div>
+
+        <LanguageSelector />
       </div>
     </div>
   )
 }
-

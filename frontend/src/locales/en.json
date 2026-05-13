@@ -1,4 +1,4 @@
-{
+﻿{
   "undergroundWordRelay": "Underground Word Relay",
   "cypher": "Cypher",
   "connecting": "Connecting to server",
@@ -7,11 +7,13 @@
   "viewArchive": "View Archive",
   "createLobby": "Create Lobby",
   "newSession": "New Session",
+  "newRound": "New Round",
   "yourNickname": "Your Nickname",
   "example": "e.g.",
   "createGame": "Create Game",
   "creating": "Creating...",
   "back": "Back",
+  "backToPortal": "Back to Portal",
   "joinLobby": "Join Lobby",
   "joinSession": "Join Session",
   "lobbyCode": "Lobby Code",
@@ -24,11 +26,18 @@
   "language": "Language",
   "selectLanguage": "Select Language",
   "chooseGame": "Choose a game and start playing!",
-  "cypherDescription": "Collaborative rap lyrics - Pass words between players and keep the flow!",
+  "cypherDescription": "Collaborative rap lyrics – pass words between players and keep the flow!",
   "werBinIch": "Who am I?",
-  "riddleGame": "Riddle Game",
-  "werBinIchDescription": "Write words for others to guess and find out who/what they are - the classic guessing game!",
+  "riddleGame": "Guessing Game",
+  "werBinIchDescription": "Write words for others to guess and find out who or what they are – the classic guessing game!",
+  "werBinIchTagline": "Write in secret. Guess out loud.",
   "gamesAvailable": "Games available",
   "players": "Players",
-  "multilingual": "Multilingual"
+  "multilingual": "Multilingual",
+  "play": "Play",
+  "reconnectTitle": "Reconnect",
+  "lastSession": "Last session",
+  "availableForSeconds": "Available for {{count}}s",
+  "reconnectNow": "Reconnect",
+  "reconnecting": "Connecting..."
 }
