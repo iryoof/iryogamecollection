@@ -37,6 +37,7 @@ export default function WerBinIchGame() {
   const initialSession = readStoredSession()
   const [screen, setScreen] = useState<WerBinIchScreen>('menu')
   const [socket, setSocket] = useState<Socket | null>(null)
+  const [socketConnected, setSocketConnected] = useState(false)
   const [lobbyData, setLobbyData] = useState<WerBinIchLobbyState | null>(null)
   const [gameData, setGameData] = useState<WerBinIchGameState | null>(null)
   const [session, setSession] = useState<WerBinIchSession | null>(initialSession)
@@ -109,9 +110,7 @@ export default function WerBinIchGame() {
     }
 
     const handleDisconnect = () => {
-      setScreen('menu')
-      setLobbyData(null)
-      setGameData(null)
+      setSocketConnected(false)
       setReconnecting(false)
 
       const activeSession = sessionRef.current
@@ -130,7 +129,16 @@ export default function WerBinIchGame() {
     newSocket.on('connect', () => {
       console.log('Wer bin ich verbunden')
       setSocket(newSocket)
+      setSocketConnected(true)
       setError('')
+
+      if (
+        sessionRef.current?.reconnectKey &&
+        sessionRef.current?.reconnectDeadline &&
+        sessionRef.current.reconnectDeadline > Date.now()
+      ) {
+        attemptSessionResume(newSocket)
+      }
     })
 
     newSocket.on('lobby:update', handleLobbyUpdate)
@@ -227,6 +235,28 @@ export default function WerBinIchGame() {
     setReconnecting(false)
   }
 
+  const attemptSessionResume = (socketToUse: Socket) => {
+    const currentSession = sessionRef.current
+    if (!currentSession?.reconnectKey || !currentSession.reconnectDeadline) return
+    if (currentSession.reconnectDeadline <= Date.now()) {
+      persistSession(null)
+      return
+    }
+
+    setReconnecting(true)
+    socketToUse.emit('session:resume', currentSession.reconnectKey, (response?: WerBinIchAck) => {
+      setReconnecting(false)
+      if (response?.error) {
+        setError(response.error)
+        return
+      }
+      if (response?.session) {
+        setMyName(response.session.playerName)
+        persistSession({ ...response.session, reconnectDeadline: null })
+      }
+    })
+  }
+
   return (
     <div className="min-h-screen text-white overflow-x-hidden">
       <div className="fixed inset-0 pointer-events-none">
@@ -236,7 +266,30 @@ export default function WerBinIchGame() {
       </div>
 
       <div className="relative z-10">
-        {screen === 'menu' && (
+        { !socketConnected && !!session?.reconnectDeadline && reconnectSecondsLeft > 0 && (
+        <div className="fixed left-1/2 top-4 z-30 w-full max-w-4xl -translate-x-1/2 px-4">
+          <div className="rounded-3xl border border-white/15 bg-black/90 p-4 shadow-xl shadow-black/40 backdrop-blur-xl">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.24em] text-zinc-400">Reconnect verfügbar</p>
+                <p className="mt-1 text-sm text-zinc-200">
+                  Deine Lobby bleibt für {reconnectSecondsLeft} Sekunden erhalten.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleReconnect}
+                disabled={reconnecting}
+                className="action-primary w-full md:w-auto px-6 py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reconnecting ? 'Verbinde …' : 'Wiederverbinden'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {screen === 'menu' && (
           <MainMenu
             socketConnected={!!socket?.connected}
             socketAvailable={!!socket}
