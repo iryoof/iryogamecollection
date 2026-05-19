@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=./index.html" />
+    <script>
+      const base = window.location.pathname.replace(/\/[^/]*$/, '/');
+      const hash = window.location.hash;
+      window.location.replace(base + 'index.html' + hash);
+    </script>
+    <title>404 Not Found</title>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+    <p><a href="./index.html">Click here if you are not redirected.</a></p>
+  </body>
+</html>

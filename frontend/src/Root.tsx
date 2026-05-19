@@ -5,7 +5,7 @@ import WerBinIchGame from './pages/WerBinIchGame'
 
 export default function Root() {
   return (
-    <Router basename="/iryogamecollection">
+    <Router>
       <Routes>
         <Route path="/" element={<GamePortal />} />
         <Route path="/cypher/*" element={<CypherGame />} />
