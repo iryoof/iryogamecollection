@@ -196,6 +196,9 @@ export default function WerBinIchGame() {
 
   const handleReconnect = () => {
     if (!socket || !session?.reconnectKey) return
+    if (!socket.connected) {
+      socket.connect()
+    }
     setReconnecting(true)
     setError('')
     socket.emit('session:resume', session.reconnectKey, (response?: WerBinIchAck) => {
@@ -236,6 +239,7 @@ export default function WerBinIchGame() {
         {screen === 'menu' && (
           <MainMenu
             socketConnected={!!socket?.connected}
+            socketAvailable={!!socket}
             onCreateLobby={handleCreate}
             onJoinLobby={handleJoin}
             onReconnect={handleReconnect}

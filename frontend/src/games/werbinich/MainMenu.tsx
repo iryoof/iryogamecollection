@@ -5,6 +5,7 @@ import LanguageSelector from '../../components/LanguageSelector'
 
 interface MainMenuProps {
   socketConnected: boolean
+  socketAvailable: boolean
   onCreateLobby: (name: string) => void
   onJoinLobby: (name: string, code: string) => void
   onReconnect: () => void
@@ -49,6 +50,7 @@ export default function MainMenu({
   onReconnect,
   error,
   clearError,
+  socketAvailable,
   reconnectAvailable,
   reconnectSecondsLeft,
   reconnecting,
@@ -124,7 +126,7 @@ export default function MainMenu({
                   </div>
                   <button
                     onClick={onReconnect}
-                    disabled={!socketConnected || reconnecting}
+                    disabled={!socketAvailable || reconnecting}
                     className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {reconnecting ? t('reconnecting') : t('reconnectNow')}
