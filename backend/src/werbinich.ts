@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Server as SocketIOServer, Socket } from 'socket.io'
 
-const RECONNECT_GRACE_MS = 60_000
+const RECONNECT_GRACE_MS = 120_000
 
 interface WerBinIchSession {
   playerId: string

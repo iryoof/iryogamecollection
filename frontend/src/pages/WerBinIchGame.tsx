@@ -13,7 +13,7 @@ import type {
 import '../styles/globals.css'
 
 const SESSION_STORAGE_KEY = 'werbinich:session'
-const RECONNECT_GRACE_MS = 60_000
+const RECONNECT_GRACE_MS = 120_000
 
 const readStoredSession = (): WerBinIchSession | null => {
   if (typeof window === 'undefined') return null
@@ -120,7 +120,7 @@ export default function WerBinIchGame() {
           ...activeSession,
           reconnectDeadline: Date.now() + RECONNECT_GRACE_MS
         })
-        setError('Verbindung zum Server verloren. Du kannst dich 60 Sekunden lang wiederverbinden.')
+        setError('Verbindung zum Server verloren. Du kannst dich 120 Sekunden lang wiederverbinden.')
         return
       }
 
