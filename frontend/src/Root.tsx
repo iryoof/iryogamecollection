@@ -1,4 +1,4 @@
-﻿import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+﻿import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import GamePortal from './pages/GamePortal'
 import CypherGame from './pages/CypherGame'
 import WerBinIchGame from './pages/WerBinIchGame'
