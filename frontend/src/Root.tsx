@@ -2,6 +2,7 @@
 import GamePortal from './pages/GamePortal'
 import CypherGame from './pages/CypherGame'
 import WerBinIchGame from './pages/WerBinIchGame'
+import WavvelengthGame from './pages/WavvelengthGame'
 
 export default function Root() {
   return (
@@ -10,6 +11,8 @@ export default function Root() {
         <Route path="/" element={<GamePortal />} />
         <Route path="/cypher/*" element={<CypherGame />} />
         <Route path="/werbinich/*" element={<WerBinIchGame />} />
+        <Route path="/wavelength/*" element={<WavvelengthGame />} />
+        <Route path="/wavvelength/*" element={<WavvelengthGame />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

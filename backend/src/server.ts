@@ -5,6 +5,7 @@ import cors from 'cors'
 import { GameManager } from './game/GameManager'
 import { setupSocketHandlers } from './io'
 import { setupWerBinIchSocketHandlers } from './werbinich'
+import { setupWavvelengthSocketHandlers } from './wavvelength'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -53,6 +54,7 @@ app.get('/api/stats', (req: Request, res: Response) => {
 // Socket.io Events
 setupSocketHandlers(io, gameManager)
 setupWerBinIchSocketHandlers(io)
+setupWavvelengthSocketHandlers(io)
 
 // Error handling â€” must be the last middleware. Express only treats this as
 // an error handler when the function has exactly 4 parameters; with 3, it is

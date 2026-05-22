@@ -35,10 +35,14 @@
   "players": "Joueurs",
   "multilingual": "Multilingue",
   "play": "Jouer",
-  "play": "Jouer",
   "reconnectTitle": "Reconnecter",
   "lastSession": "Dernière session",
   "availableForSeconds": "Disponible pendant {{count}}s",
   "reconnectNow": "Se reconnecter",
-  "reconnecting": "Connexion..."
+  "reconnecting": "Connexion...",
+  "wavvelength": "Wavelength",
+  "numberGuessingGame": "Jeu de devinette numérique",
+  "wavvelengthDescription": "Devinez le nombre à travers des questions",
+  "pleaseEnterNickname": "Veuillez entrer un surnom",
+  "pleaseEnterCode": "Veuillez entrer un code"
 }

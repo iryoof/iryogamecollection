@@ -35,10 +35,14 @@
   "players": "Players",
   "multilingual": "Multilingual",
   "play": "Play",
-  "play": "Play",
   "reconnectTitle": "Reconnect",
   "lastSession": "Last session",
   "availableForSeconds": "Available for {{count}}s",
   "reconnectNow": "Reconnect",
-  "reconnecting": "Connecting..."
+  "reconnecting": "Connecting...",
+  "wavvelength": "Wavelength",
+  "numberGuessingGame": "Number Guessing Game",
+  "wavvelengthDescription": "Guess the number through questions",
+  "pleaseEnterNickname": "Please enter a nickname",
+  "pleaseEnterCode": "Please enter a code"
 }

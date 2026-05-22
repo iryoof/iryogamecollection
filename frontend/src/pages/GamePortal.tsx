@@ -26,7 +26,7 @@ export default function GamePortal() {
           <p className="text-xl text-white/70">{t('chooseGame')}</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           <Link
             to="/cypher"
             className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-blue-500/30 hover:border-blue-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20 no-underline"
@@ -58,11 +58,27 @@ export default function GamePortal() {
               </div>
             </div>
           </Link>
+
+          <Link
+            to="/wavelength"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 hover:border-cyan-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 no-underline"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 group-hover:from-cyan-500/20 group-hover:to-blue-500/20 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="text-5xl mb-4">🌊</div>
+              <h2 className="text-3xl font-bold mb-2 text-white">{t('wavvelength')}</h2>
+              <p className="text-white/80 mb-4">{t('numberGuessingGame')}</p>
+              <p className="text-sm text-white/60">{t('wavvelengthDescription')}</p>
+              <div className="mt-6 inline-block px-4 py-2 bg-cyan-500/30 rounded-lg text-sm text-cyan-300 group-hover:bg-cyan-500/50 transition-colors">
+                {t('play')}
+              </div>
+            </div>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-            <div className="text-2xl font-bold text-purple-400">2</div>
+            <div className="text-2xl font-bold text-purple-400">3</div>
             <p className="text-white/60 text-sm mt-1">{t('gamesAvailable')}</p>
           </div>
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
