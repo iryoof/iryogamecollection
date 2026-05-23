@@ -15,8 +15,15 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
 
   const me = lobby.players.find(player => player.id === selfPlayerId)
   const activePlayers = lobby.players.filter(player => !player.isDisconnected)
+  const hasSubmittedVote = !!selfPlayerId && lobby.votedPlayerIds.includes(selfPlayerId)
+  const submittedVotes = lobby.votedPlayerIds.filter(playerId =>
+    activePlayers.some(player => player.id === playerId)
+  ).length
 
   const handleSubmitVote = () => {
+    if (hasSubmittedVote) {
+      return
+    }
     if (selectedNumber === null) {
       onError('Bitte wähle eine Zahl.')
       return
@@ -54,11 +61,12 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
               <button
                 key={number}
                 onClick={() => setSelectedNumber(number)}
+                disabled={hasSubmittedVote}
                 className={`aspect-square rounded-2xl border-2 font-bold text-lg transition-all ${
                   selectedNumber === number
                     ? 'bg-white text-black border-white scale-[1.03]'
                     : 'bg-white/5 border-white/15 text-white hover:bg-white/10 hover:border-white/35'
-                }`}
+                } ${hasSubmittedVote ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 {number}
               </button>
@@ -67,14 +75,15 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
 
           <button
             onClick={handleSubmitVote}
-            disabled={selectedNumber === null || loading}
+            disabled={selectedNumber === null || loading || hasSubmittedVote}
             className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Sende Stimme...' : 'Abstimmung abgeben'}
+            {loading ? 'Sende Stimme...' : hasSubmittedVote ? 'Stimme gespeichert' : 'Abstimmung abgeben'}
           </button>
 
           <div className="metric-strip rounded-[1.5rem] p-5 text-sm text-zinc-400 space-y-1 text-center">
             <p>{activePlayers.length} aktive Spieler stimmen mit ab.</p>
+            <p>{submittedVotes}/{activePlayers.length} Stimmen eingegangen.</p>
             <p>Getrennte Spieler müssen nicht erst zurückkommen, damit die Runde weitergeht.</p>
           </div>
         </div>

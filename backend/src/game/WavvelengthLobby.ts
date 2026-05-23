@@ -83,11 +83,13 @@ export class WavvelengthLobby {
     code: string
     state: WavvelengthPhase
     players: WavvelengthPlayer[]
+    votedPlayerIds: string[]
   } {
     return {
       code: this.code,
       state: this.state,
-      players: this.getPlayers()
+      players: this.getPlayers(),
+      votedPlayerIds: Array.from(this.votes.keys())
     }
   }
 
@@ -429,7 +431,9 @@ export class WavvelengthLobby {
     if (this.state === 'playing' || this.state === 'result') {
       this.questionsAndAnswers = this.questionsAndAnswers.filter(entry => {
         const player = this.players.get(entry.playerId)
-        return !!player && !player.isDisconnected
+        if (!player) return false
+        if (!player.isDisconnected) return true
+        return entry.answer.trim().length > 0
       })
     }
   }

@@ -12,6 +12,7 @@ export interface WavvelengthLobbyState {
   code: string
   state: 'waiting' | 'voting' | 'playing' | 'result'
   players: WavvelengthPlayer[]
+  votedPlayerIds: string[]
 }
 
 export interface WavvelengthVoteOption {
