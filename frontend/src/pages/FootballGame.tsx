@@ -1,10 +1,260 @@
 import { useEffect, useState } from 'react'
 import LanguageSelector from '../components/LanguageSelector'
 
-interface Team {
+type Player = {
+  id: string
+  name: string
+  rating: number
+  teamId: string
+}
+
+type Team = {
   id: string
   name: string
   country?: string
+  players: Player[]
+}
+
+type Fixture = {
+  homeId: string
+  awayId: string
+  played?: boolean
+  result?: { homeGoals: number; awayGoals: number; events: any[] }
+}
+
+type Standing = {
+  teamId: string
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+  points: number
+}
+
+type CareerState = {
+  id: string
+  teamId: string
+  season: number
+  fixtures: Fixture[][]
+  currentMatchday: number
+  standings: Standing[]
+}
+
+const LOCAL_SAVE_KEY = 'football-career-saves'
+
+const localTeams: Team[] = [
+  {
+    id: 'manu',
+    name: 'Manchester United',
+    country: 'England',
+    players: [
+      { id: 'rm', name: 'Marcus Rashford', rating: 85, teamId: 'manu' },
+      { id: 'br', name: 'Bruno Fernandes', rating: 88, teamId: 'manu' },
+      { id: 'cr', name: 'Casemiro', rating: 86, teamId: 'manu' },
+      { id: 'mg', name: 'Luke Shaw', rating: 80, teamId: 'manu' },
+      { id: 'vh', name: 'Raphaël Varane', rating: 83, teamId: 'manu' },
+      { id: 'dh', name: 'Diogo Dalot', rating: 77, teamId: 'manu' },
+      { id: 'gv', name: 'Garnacho', rating: 72, teamId: 'manu' },
+      { id: 'sm', name: 'Scott McTominay', rating: 78, teamId: 'manu' },
+      { id: 'am', name: 'Antony', rating: 79, teamId: 'manu' },
+      { id: 'kg', name: 'Kobbie Mainoo', rating: 70, teamId: 'manu' },
+      { id: 'gk1', name: 'David de Gea', rating: 81, teamId: 'manu' }
+    ]
+  },
+  {
+    id: 'realm',
+    name: 'Real Madrid',
+    country: 'Spain',
+    players: [
+      { id: 'vr', name: 'Vinícius Júnior', rating: 91, teamId: 'realm' },
+      { id: 'kb', name: 'Karim Benzema', rating: 89, teamId: 'realm' },
+      { id: 'lm', name: 'Luka Modrić', rating: 86, teamId: 'realm' },
+      { id: 'tb', name: 'Toni Kroos', rating: 88, teamId: 'realm' },
+      { id: 'rd', name: 'Rodrygo', rating: 84, teamId: 'realm' },
+      { id: 'sm2', name: 'Sergio Ramos', rating: 82, teamId: 'realm' },
+      { id: 'vb', name: 'Thibaut Courtois', rating: 89, teamId: 'realm' },
+      { id: 'ea', name: 'Eduardo Camavinga', rating: 80, teamId: 'realm' },
+      { id: 'rf', name: 'Federico Valverde', rating: 83, teamId: 'realm' },
+      { id: 'nb', name: 'Nacho', rating: 79, teamId: 'realm' },
+      { id: 'js', name: 'Jude Bellingham', rating: 92, teamId: 'realm' }
+    ]
+  }
+]
+
+function getTeamById(teams: Team[], id: string) {
+  return teams.find(t => t.id === id) || null
+}
+
+function getTeamName(teams: Team[], id: string) {
+  return getTeamById(teams, id)?.name || id
+}
+
+function getAllPlayers(teams: Team[]) {
+  return teams.flatMap(team => team.players.map(player => ({ ...player, teamId: team.id })))
+}
+
+function computeTeamRating(teams: Team[], id: string) {
+  const team = getTeamById(teams, id)
+  if (!team) return 0
+  const sum = team.players.reduce((total, player) => total + player.rating, 0)
+  return Math.round(sum / Math.max(team.players.length, 1))
+}
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function simulateLocalMatch(teams: Team[], homeId: string, awayId: string) {
+  const homeRating = computeTeamRating(teams, homeId)
+  const awayRating = computeTeamRating(teams, awayId)
+  const baseHome = Math.max(0, Math.round(1.5 + (homeRating - awayRating) * 0.06 + randomInt(-1, 1)))
+  const baseAway = Math.max(0, Math.round(1.2 + (awayRating - homeRating) * 0.05 + randomInt(-1, 1)))
+  const homeGoals = Math.min(5, baseHome + randomInt(0, 2))
+  const awayGoals = Math.min(5, baseAway + randomInt(0, 2))
+  const events = [
+    { minute: randomInt(10, 35), text: `${getTeamName(teams, homeId)} scores first!` },
+    { minute: randomInt(36, 70), text: `${getTeamName(teams, awayId)} pushes for a reply.` },
+    { minute: randomInt(71, 90), text: `${homeGoals > awayGoals ? getTeamName(teams, homeId) : getTeamName(teams, awayId)} finishes the match strong.` }
+  ]
+
+  return {
+    home: { id: homeId, name: getTeamName(teams, homeId), goals: homeGoals },
+    away: { id: awayId, name: getTeamName(teams, awayId), goals: awayGoals },
+    events
+  }
+}
+
+function buildStandings(teamIds: string[]) {
+  return teamIds.map(id => ({ teamId: id, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0 }))
+}
+
+function createRoundRobin(teams: string[]) {
+  const t = teams.slice()
+  if (t.length % 2 === 1) t.push('BYE')
+  const n = t.length
+  const rounds: Fixture[][] = []
+  for (let r = 0; r < n - 1; r++) {
+    const fixtures: Fixture[] = []
+    for (let i = 0; i < n / 2; i++) {
+      const home = t[i]
+      const away = t[n - 1 - i]
+      if (home !== 'BYE' && away !== 'BYE') fixtures.push({ homeId: home, awayId: away })
+    }
+    t.splice(1, 0, t.pop() as string)
+    rounds.push(fixtures)
+  }
+  return rounds
+}
+
+function createLocalCareer(teamId: string) {
+  const teamIds = localTeams.map(t => t.id)
+  const fixtures = createRoundRobin(teamIds)
+  return {
+    id: `${Date.now()}-${teamId}`,
+    teamId,
+    season: 1,
+    fixtures,
+    currentMatchday: 0,
+    standings: buildStandings(teamIds)
+  } as CareerState
+}
+
+function simulateNextMatchdayLocal(career: CareerState, teams: Team[]) {
+  if (career.currentMatchday >= career.fixtures.length) throw new Error('Season complete')
+  const matchday = career.fixtures[career.currentMatchday]
+  for (const fixture of matchday) {
+    const res = simulateLocalMatch(teams, fixture.homeId, fixture.awayId)
+    fixture.played = true
+    fixture.result = { homeGoals: res.home.goals, awayGoals: res.away.goals, events: res.events }
+    const homeS = career.standings.find(s => s.teamId === fixture.homeId)!
+    const awayS = career.standings.find(s => s.teamId === fixture.awayId)!
+    homeS.played += 1
+    awayS.played += 1
+    homeS.goalsFor += res.home.goals
+    homeS.goalsAgainst += res.away.goals
+    awayS.goalsFor += res.away.goals
+    awayS.goalsAgainst += res.home.goals
+    if (res.home.goals > res.away.goals) {
+      homeS.won += 1; awayS.lost += 1; homeS.points += 3
+    } else if (res.home.goals < res.away.goals) {
+      awayS.won += 1; homeS.lost += 1; awayS.points += 3
+    } else {
+      homeS.drawn += 1; awayS.drawn += 1; homeS.points += 1; awayS.points += 1
+    }
+  }
+  career.currentMatchday += 1
+  career.standings.sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst))
+  return career
+}
+
+function listMarketOptionsLocal(teams: Team[], teamId: string) {
+  return getAllPlayers(teams).filter(player => player.teamId !== teamId)
+}
+
+function transferPlayerLocal(teams: Team[], teamId: string, playerId: string): { success: boolean; player?: Player; teams?: Team[] } {
+  const sourceTeam = teams.find(team => team.players.some(player => player.id === playerId))
+  const targetTeam = teams.find(team => team.id === teamId)
+  if (!sourceTeam || !targetTeam || sourceTeam.id === targetTeam.id) return { success: false }
+  const player = sourceTeam.players.find(p => p.id === playerId)
+  if (!player) return { success: false }
+  const updatedTeams = teams.map(team => {
+    if (team.id === sourceTeam.id) return { ...team, players: team.players.filter(p => p.id !== playerId) }
+    if (team.id === targetTeam.id) return { ...team, players: [...team.players, { ...player, teamId }] }
+    return team
+  })
+  return { success: true, player: { ...player, teamId }, teams: updatedTeams }
+}
+
+function trainPlayerLocal(teams: Team[], playerId: string, intensity: 'light' | 'intense') {
+  return teams.map(team => ({
+    ...team,
+    players: team.players.map(player => {
+      if (player.id !== playerId) return player
+      const bump = intensity === 'intense' ? 2 : 1
+      return { ...player, rating: Math.min(99, player.rating + bump) }
+    })
+  }))
+}
+
+function loadLocalSaves() {
+  const raw = window.localStorage.getItem(LOCAL_SAVE_KEY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+function saveLocalSave(name: string, data: any) {
+  const saves = loadLocalSaves()
+  const newSave = { id: `${Date.now()}`, name, date: new Date().toISOString(), data }
+  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify([newSave, ...saves]))
+  return newSave
+}
+
+function deleteLocalSave(id: string) {
+  const saves = loadLocalSaves().filter((save: any) => save.id !== id)
+  window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(saves))
+}
+
+const LOCAL_CAREER_STATE_KEY = 'football-career-state'
+
+function saveLocalCareerState(state: CareerState) {
+  window.localStorage.setItem(LOCAL_CAREER_STATE_KEY, JSON.stringify(state))
+}
+
+function loadLocalCareerState(id: string) {
+  const raw = window.localStorage.getItem(LOCAL_CAREER_STATE_KEY)
+  if (!raw) return null
+  try {
+    const career = JSON.parse(raw) as CareerState
+    return career.id === id ? career : null
+  } catch {
+    return null
+  }
 }
 
 export default function FootballGame() {
@@ -20,96 +270,73 @@ export default function FootballGame() {
   const [homePlayers, setHomePlayers] = useState<any[]>([])
 
   const getTeamName = (id: string) => teams.find(t => t.id === id)?.name || id
+
   useEffect(() => {
     document.title = 'Football Career'
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    fetch(`${base}/api/football/teams`).then(r => r.json()).then(setTeams).catch(console.error)
-    fetch(`${base}/api/football/saves`).then(r => r.json()).then(setSaves).catch(() => setSaves([]))
+    setTeams(localTeams)
+    setSaves(loadLocalSaves())
   }, [])
 
   useEffect(() => {
-    if (!home) return setHomePlayers([])
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    fetch(`${base}/api/football/teams/${home}/players`).then(r => r.json()).then(setHomePlayers).catch(() => setHomePlayers([]))
-    // refresh market when changing team
+    if (!home) {
+      setHomePlayers([])
+      setMarket([])
+      return
+    }
+    const team = getTeamById(teams, home)
+    setHomePlayers(team?.players || [])
     refreshMarket()
-  }, [home])
+  }, [home, teams])
 
   const simulate = async () => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
     if (!home || !away) return
-    const res = await fetch(`${base}/api/football/simulate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ homeId: home, awayId: away })
-    })
-    const data = await res.json()
+    const data = simulateLocalMatch(teams, home, away)
     setResult(data)
   }
 
   const refreshSaves = async () => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    try {
-      const res = await fetch(`${base}/api/football/saves`)
-      const list = await res.json()
-      setSaves(list)
-    } catch (e) {
-      setSaves([])
-    }
+    setSaves(loadLocalSaves())
   }
 
   const handleSave = async () => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
     const payload = { home, away, result }
-    const res = await fetch(`${base}/api/football/saves`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: saveName, data: payload })
-    })
-    const meta = await res.json()
+    const meta = saveLocalSave(saveName, payload)
     await refreshSaves()
     return meta
   }
 
   const handleLoad = async (id: string) => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/saves/${id}`)
-    if (!res.ok) return
-    const payload = await res.json()
-    const saved = payload.data
-    setHome(saved.home)
-    setAway(saved.away)
-    setResult(saved.result)
+    const payload = loadLocalSaves().find((save: any) => save.id === id)
+    if (!payload) return
+    setHome(payload.data.home)
+    setAway(payload.data.away)
+    setResult(payload.data.result)
   }
 
   const handleDelete = async (id: string) => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    await fetch(`${base}/api/football/saves/${id}`, { method: 'DELETE' })
+    deleteLocalSave(id)
     await refreshSaves()
   }
 
   const createCareer = async () => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/career`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamId: home }) })
-    const career = await res.json()
+    if (!home) return
+    const career = createLocalCareer(home)
     setCareerId(career.id)
     setCareerState(career)
+    saveLocalCareerState(career)
   }
 
   const loadCareer = async (id: string) => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/career/${id}`)
-    if (!res.ok) return
-    const career = await res.json()
+    if (!id) return
+    const career = loadLocalCareerState(id)
+    if (!career) return
     setCareerId(career.id)
     setCareerState(career)
   }
 
   const refreshMarket = async () => {
-    if (!home) return
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/market/${home}`)
-    if (!res.ok) return setMarket([])
-    const list = await res.json()
-    setMarket(list)
+    if (!home) return setMarket([])
+    setMarket(listMarketOptionsLocal(teams, home))
   }
 
   const careerTeamStanding = careerState?.standings.find((s: any) => s.teamId === careerState.teamId) || null
@@ -118,42 +345,42 @@ export default function FootballGame() {
   const seasonProgress = careerState ? Math.round((careerState.currentMatchday / careerState.fixtures.length) * 100) : 0
 
   const handleTransfer = async (playerId: string) => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/transfer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamId: home, playerId }) })
-    const result = await res.json()
-    if (result.success) {
+    if (!home) return
+    const result = transferPlayerLocal(teams, home, playerId)
+    if (result.success && result.teams && result.player) {
+      setTeams(result.teams)
+      setMarket(listMarketOptionsLocal(result.teams, home))
       alert(`Transfer successful: ${result.player.name}`)
-      await refreshMarket()
-      if (careerId) await loadCareer(careerId)
+      if (careerState) saveLocalCareerState(careerState)
     } else {
       alert('Transfer failed')
     }
   }
 
   const handleTrain = async (playerId: string, intensity: 'light' | 'intense' = 'light') => {
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/train`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamId: home, playerId, intensity }) })
-    const player = await res.json()
-    alert(`${player.name} trained — new rating: ${player.rating}`)
-    if (careerId) await loadCareer(careerId)
+    const updated = trainPlayerLocal(teams, playerId, intensity)
+    setTeams(updated)
+    const player = updated.flatMap(t => t.players).find(p => p.id === playerId)
+    if (player) alert(`${player.name} trained — new rating: ${player.rating}`)
+    if (careerState) saveLocalCareerState(careerState)
     await refreshMarket()
   }
 
   const simulateNext = async () => {
-    if (!careerId) return
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    await fetch(`${base}/api/football/career/${careerId}/next`, { method: 'POST' })
-    const ref = await fetch(`${base}/api/football/career/${careerId}`)
-    const career = await ref.json()
-    setCareerState(career)
+    if (!careerState) return
+    const updatedCareer = simulateNextMatchdayLocal({ ...careerState }, teams)
+    setCareerState({ ...updatedCareer })
+    saveLocalCareerState(updatedCareer)
   }
 
   const simulateSeason = async () => {
-    if (!careerId) return
-    const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/football/career/${careerId}/simulate`, { method: 'POST' })
-    const career = await res.json()
-    setCareerState(career)
+    if (!careerState) return
+    let updatedCareer = { ...careerState }
+    while (updatedCareer.currentMatchday < updatedCareer.fixtures.length) {
+      updatedCareer = simulateNextMatchdayLocal(updatedCareer, teams)
+    }
+    setCareerState({ ...updatedCareer })
+    saveLocalCareerState(updatedCareer)
   }
 
   return (
