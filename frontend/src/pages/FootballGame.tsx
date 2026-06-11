@@ -55,12 +55,7 @@ const localTeams: Team[] = [
       { id: 'cr', name: 'Casemiro', rating: 86, teamId: 'manu' },
       { id: 'mg', name: 'Luke Shaw', rating: 80, teamId: 'manu' },
       { id: 'vh', name: 'Raphaël Varane', rating: 83, teamId: 'manu' },
-      { id: 'dh', name: 'Diogo Dalot', rating: 77, teamId: 'manu' },
-      { id: 'gv', name: 'Garnacho', rating: 72, teamId: 'manu' },
-      { id: 'sm', name: 'Scott McTominay', rating: 78, teamId: 'manu' },
-      { id: 'am', name: 'Antony', rating: 79, teamId: 'manu' },
-      { id: 'kg', name: 'Kobbie Mainoo', rating: 70, teamId: 'manu' },
-      { id: 'gk1', name: 'David de Gea', rating: 81, teamId: 'manu' }
+      { id: 'dh', name: 'Diogo Dalot', rating: 77, teamId: 'manu' }
     ]
   },
   {
@@ -73,12 +68,223 @@ const localTeams: Team[] = [
       { id: 'lm', name: 'Luka Modrić', rating: 86, teamId: 'realm' },
       { id: 'tb', name: 'Toni Kroos', rating: 88, teamId: 'realm' },
       { id: 'rd', name: 'Rodrygo', rating: 84, teamId: 'realm' },
-      { id: 'sm2', name: 'Sergio Ramos', rating: 82, teamId: 'realm' },
-      { id: 'vb', name: 'Thibaut Courtois', rating: 89, teamId: 'realm' },
-      { id: 'ea', name: 'Eduardo Camavinga', rating: 80, teamId: 'realm' },
-      { id: 'rf', name: 'Federico Valverde', rating: 83, teamId: 'realm' },
-      { id: 'nb', name: 'Nacho', rating: 79, teamId: 'realm' },
       { id: 'js', name: 'Jude Bellingham', rating: 92, teamId: 'realm' }
+    ]
+  },
+  {
+    id: 'bayern',
+    name: 'Bayern München',
+    country: 'Germany',
+    players: [
+      { id: 'lm1', name: 'Leroy Sané', rating: 88, teamId: 'bayern' },
+      { id: 'ml', name: 'Manuel Neuer', rating: 88, teamId: 'bayern' },
+      { id: 'jk', name: 'Joshua Kimmich', rating: 89, teamId: 'bayern' },
+      { id: 'sb', name: 'Serge Gnabry', rating: 84, teamId: 'bayern' },
+      { id: 'kn', name: 'Kingsley Coman', rating: 85, teamId: 'bayern' }
+    ]
+  },
+  {
+    id: 'dortmund',
+    name: 'Borussia Dortmund',
+    country: 'Germany',
+    players: [
+      { id: 'hm', name: 'Erling Haaland', rating: 92, teamId: 'dortmund' },
+      { id: 'jm', name: 'Jude Bellingham', rating: 90, teamId: 'dortmund' },
+      { id: 'bf', name: 'Marco Reus', rating: 86, teamId: 'dortmund' },
+      { id: 'kg2', name: 'Karim Adeyemi', rating: 82, teamId: 'dortmund' },
+      { id: 'gm', name: 'Gianluigi Donnarumma', rating: 88, teamId: 'dortmund' }
+    ]
+  },
+  {
+    id: 'lev',
+    name: 'Bayer Leverkusen',
+    country: 'Germany',
+    players: [
+      { id: 'fc', name: 'Florian Wirtz', rating: 86, teamId: 'lev' },
+      { id: 'pd', name: 'Patrik Schick', rating: 84, teamId: 'lev' },
+      { id: 'ea2', name: 'Exequiel Palacios', rating: 82, teamId: 'lev' },
+      { id: 'al', name: 'Alphonso Davies', rating: 86, teamId: 'lev' },
+      { id: 'ke', name: 'Kevin Trapp', rating: 83, teamId: 'lev' }
+    ]
+  },
+  {
+    id: 'hamburg',
+    name: 'Hamburger SV',
+    country: 'Germany',
+    players: [
+      { id: 'je', name: 'Jackson Irvine', rating: 77, teamId: 'hamburg' },
+      { id: 'lk', name: 'Leroy Kwadwo', rating: 74, teamId: 'hamburg' },
+      { id: 'sr', name: 'Sebastian Schonlau', rating: 77, teamId: 'hamburg' },
+      { id: 'fe', name: 'Filip Bilbija', rating: 73, teamId: 'hamburg' },
+      { id: 'mh', name: 'Mats Vester', rating: 75, teamId: 'hamburg' }
+    ]
+  },
+  {
+    id: 'schalke',
+    name: 'Schalke 04',
+    country: 'Germany',
+    players: [
+      { id: 'fr', name: 'Franco Di Santo', rating: 75, teamId: 'schalke' },
+      { id: 'ml2', name: 'Matthias Duhamel', rating: 74, teamId: 'schalke' },
+      { id: 'am2', name: 'Amine Harit', rating: 76, teamId: 'schalke' },
+      { id: 'gn', name: 'Goncalo Paciencia', rating: 73, teamId: 'schalke' },
+      { id: 'sp', name: 'Sepp van den Berg', rating: 72, teamId: 'schalke' }
+    ]
+  },
+  {
+    id: 'munich1860',
+    name: '1860 München',
+    country: 'Germany',
+    players: [
+      { id: 'ks', name: 'Kevin Stadler', rating: 72, teamId: 'munich1860' },
+      { id: 'mt', name: 'Maximilian Wittek', rating: 73, teamId: 'munich1860' },
+      { id: 'jh', name: 'Jonas Hummels', rating: 71, teamId: 'munich1860' },
+      { id: 'br2', name: 'Birk Risa', rating: 70, teamId: 'munich1860' },
+      { id: 'jm2', name: 'Jan Mauersberger', rating: 70, teamId: 'munich1860' }
+    ]
+  },
+  {
+    id: 'barca',
+    name: 'Barcelona',
+    country: 'Spain',
+    players: [
+      { id: 'lm2', name: 'Lionel Messi', rating: 93, teamId: 'barca' },
+      { id: 'rfl', name: 'Robert Lewandowski', rating: 91, teamId: 'barca' },
+      { id: 'fb', name: 'Frenkie de Jong', rating: 88, teamId: 'barca' },
+      { id: 'ab', name: 'Ansu Fati', rating: 84, teamId: 'barca' },
+      { id: 'mg2', name: 'Marc-André ter Stegen', rating: 88, teamId: 'barca' }
+    ]
+  },
+  {
+    id: 'atm',
+    name: 'Atlético Madrid',
+    country: 'Spain',
+    players: [
+      { id: 'km', name: 'Koke', rating: 84, teamId: 'atm' },
+      { id: 'js2', name: 'João Félix', rating: 84, teamId: 'atm' },
+      { id: 'yb', name: 'Yannick Carrasco', rating: 83, teamId: 'atm' },
+      { id: 'rg', name: 'Rodrigo De Paul', rating: 85, teamId: 'atm' },
+      { id: 'mg3', name: 'Jan Oblak', rating: 91, teamId: 'atm' }
+    ]
+  },
+  {
+    id: 'juve',
+    name: 'Juventus',
+    country: 'Italy',
+    players: [
+      { id: 'cr2', name: 'Cristiano Ronaldo', rating: 91, teamId: 'juve' },
+      { id: 'pm', name: 'Paulo Dybala', rating: 86, teamId: 'juve' },
+      { id: 'lm3', name: 'Leonardo Bonucci', rating: 85, teamId: 'juve' },
+      { id: 'mr', name: 'Matthijs de Ligt', rating: 86, teamId: 'juve' },
+      { id: 'wm', name: 'Wojciech Szczęsny', rating: 88, teamId: 'juve' }
+    ]
+  },
+  {
+    id: 'milan',
+    name: 'AC Milan',
+    country: 'Italy',
+    players: [
+      { id: 'zz', name: 'Zlatan Ibrahimović', rating: 88, teamId: 'milan' },
+      { id: 'ks2', name: 'Krzysztof Piątek', rating: 82, teamId: 'milan' },
+      { id: 'ra', name: 'Rafael Leão', rating: 85, teamId: 'milan' },
+      { id: 'tm', name: 'Theo Hernández', rating: 86, teamId: 'milan' },
+      { id: 'gs', name: 'Gianluigi Donnarumma', rating: 88, teamId: 'milan' }
+    ]
+  },
+  {
+    id: 'psg',
+    name: 'Paris Saint-Germain',
+    country: 'France',
+    players: [
+      { id: 'km3', name: 'Kylian Mbappé', rating: 92, teamId: 'psg' },
+      { id: 'ne', name: 'Neymar Jr.', rating: 91, teamId: 'psg' },
+      { id: 'mg4', name: 'Marco Verratti', rating: 87, teamId: 'psg' },
+      { id: 'ml4', name: 'Marquinhos', rating: 87, teamId: 'psg' },
+      { id: 'hg', name: 'Hugo Lloris', rating: 87, teamId: 'psg' }
+    ]
+  },
+  {
+    id: 'ajax',
+    name: 'Ajax',
+    country: 'Netherlands',
+    players: [
+      { id: 'bf2', name: 'Brian Brobbey', rating: 82, teamId: 'ajax' },
+      { id: 'rh', name: 'Ryan Gravenberch', rating: 84, teamId: 'ajax' },
+      { id: 'jn', name: 'Jurriën Timber', rating: 84, teamId: 'ajax' },
+      { id: 'ks3', name: 'Kjell Scherpen', rating: 78, teamId: 'ajax' },
+      { id: 'ez', name: 'Edson Álvarez', rating: 83, teamId: 'ajax' }
+    ]
+  },
+  {
+    id: 'fener',
+    name: 'Fenerbahçe',
+    country: 'Turkey',
+    players: [
+      { id: 'mb', name: 'Mesut Özil', rating: 80, teamId: 'fener' },
+      { id: 'yq', name: 'Youssef En-Nesyri', rating: 82, teamId: 'fener' },
+      { id: 'tt', name: 'Tolga Ciğerci', rating: 77, teamId: 'fener' },
+      { id: 'cb', name: 'Calhanoglu', rating: 84, teamId: 'fener' },
+      { id: 'bm', name: 'Berke Özer', rating: 75, teamId: 'fener' }
+    ]
+  },
+  {
+    id: 'city',
+    name: 'Manchester City',
+    country: 'England',
+    players: [
+      { id: 'kp', name: 'Kevin De Bruyne', rating: 91, teamId: 'city' },
+      { id: 'rs', name: 'Riyad Mahrez', rating: 86, teamId: 'city' },
+      { id: 'er', name: 'Erling Haaland', rating: 92, teamId: 'city' },
+      { id: 'rs2', name: 'Ruben Dias', rating: 87, teamId: 'city' },
+      { id: 'ed', name: 'Ederson', rating: 89, teamId: 'city' }
+    ]
+  },
+  {
+    id: 'arsenal',
+    name: 'Arsenal',
+    country: 'England',
+    players: [
+      { id: 'ag', name: 'Bukayo Saka', rating: 87, teamId: 'arsenal' },
+      { id: 'os', name: 'Olivier Giroud', rating: 83, teamId: 'arsenal' },
+      { id: 'gm2', name: 'Gabriel Magalhães', rating: 84, teamId: 'arsenal' },
+      { id: 'bd', name: 'Ben White', rating: 82, teamId: 'arsenal' },
+      { id: 'jm3', name: 'James Maddison', rating: 85, teamId: 'arsenal' }
+    ]
+  },
+  {
+    id: 'leeds',
+    name: 'Leeds United',
+    country: 'England',
+    players: [
+      { id: 'rz', name: 'Rodrigo', rating: 84, teamId: 'leeds' },
+      { id: 'pj', name: 'Pascal Groß', rating: 80, teamId: 'leeds' },
+      { id: 'le', name: 'Liam Cooper', rating: 77, teamId: 'leeds' },
+      { id: 'bm2', name: 'Brenden Aaronson', rating: 79, teamId: 'leeds' },
+      { id: 'dg', name: 'Daniel James', rating: 78, teamId: 'leeds' }
+    ]
+  },
+  {
+    id: 'portsmouth',
+    name: 'Portsmouth',
+    country: 'England',
+    players: [
+      { id: 'ms', name: 'Marcus Harness', rating: 76, teamId: 'portsmouth' },
+      { id: 'rb', name: 'Ryan Bennett', rating: 75, teamId: 'portsmouth' },
+      { id: 'hp', name: 'Harrison Pink', rating: 74, teamId: 'portsmouth' },
+      { id: 'jc', name: 'Jonson Clarke-Harris', rating: 79, teamId: 'portsmouth' },
+      { id: 'jm4', name: 'John Mousinho', rating: 73, teamId: 'portsmouth' }
+    ]
+  },
+  {
+    id: 'exeter',
+    name: 'Exeter City',
+    country: 'England',
+    players: [
+      { id: 'sc', name: 'Sam Nombe', rating: 74, teamId: 'exeter' },
+      { id: 'na', name: 'Nathan Baxter', rating: 73, teamId: 'exeter' },
+      { id: 'tg', name: 'Tommy Gregory', rating: 72, teamId: 'exeter' },
+      { id: 'lb', name: 'Lee Martin', rating: 71, teamId: 'exeter' },
+      { id: 'ms2', name: 'Matt Jay', rating: 73, teamId: 'exeter' }
     ]
   }
 ]
