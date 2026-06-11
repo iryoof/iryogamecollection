@@ -74,6 +74,22 @@ export default function GamePortal() {
               </div>
             </div>
           </Link>
+
+          <Link
+            to="/football"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700/20 to-emerald-600/20 border border-green-600/30 hover:border-green-500/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20 no-underline"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-emerald-600/10 group-hover:from-green-600/20 group-hover:to-emerald-600/20 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="text-5xl mb-4">⚽</div>
+              <h2 className="text-3xl font-bold mb-2 text-white">Football Career</h2>
+              <p className="text-white/80 mb-4">Realistic career mode with teams and players (MVP)</p>
+              <p className="text-sm text-white/60">Play single matches, manage squad, and simulate seasons.</p>
+              <div className="mt-6 inline-block px-4 py-2 bg-green-500/30 rounded-lg text-sm text-green-300 group-hover:bg-green-500/50 transition-colors">
+                Play
+              </div>
+            </div>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
