@@ -75,6 +75,21 @@ export default function GamePortal() {
             </div>
           </Link>
 
+          <Link
+            to="/marketstand"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-700/20 to-fuchsia-600/20 border border-violet-500/30 hover:border-violet-400/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-violet-500/20 no-underline"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 group-hover:from-violet-500/20 group-hover:to-fuchsia-500/20 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="text-5xl mb-4">💎</div>
+              <h2 className="text-3xl font-bold mb-2 text-white">Meth Market Stand</h2>
+              <p className="text-white/80 mb-4">Führe einen winzigen Kristall-Marktstand und optimiere Preise, Einkauf und Werbung.</p>
+              <p className="text-sm text-white/60">5 Tage, tägliche Marktbedingungen und du willst als Boss aus dem Markt gehen.</p>
+              <div className="mt-6 inline-block px-4 py-2 bg-violet-500/30 rounded-lg text-sm text-violet-300 group-hover:bg-violet-500/50 transition-colors">
+                Spielen
+              </div>
+            </div>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
