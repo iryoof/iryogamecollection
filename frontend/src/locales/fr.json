@@ -48,5 +48,7 @@
   "pleaseEnterCode": "Veuillez entrer un code",
   "arrowWords": "Mots fléchés",
   "soloPuzzle": "Jeu en solo",
-  "arrowWordsDescription": "Les définitions sont dans la grille, une grille inédite"
+  "arrowWordsDescription": "Les définitions sont dans la grille, une grille inédite",
+  "pokemonQuiz": "Quiz Pokémon",
+  "pokemonQuizDescription": "Devine la génération et le numéro exact du Pokédex pour chaque Pokémon"
 }

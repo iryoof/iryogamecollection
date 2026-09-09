@@ -48,5 +48,7 @@
   "pleaseEnterCode": "Bitte geben Sie einen Code ein",
   "arrowWords": "Schwedenrätsel",
   "soloPuzzle": "Rätsel für alleine",
-  "arrowWordsDescription": "Fragen stehen im Gitter, jedes Rätsel neu gewürfelt"
+  "arrowWordsDescription": "Fragen stehen im Gitter, jedes Rätsel neu gewürfelt",
+  "pokemonQuiz": "Pokémon-Quiz",
+  "pokemonQuizDescription": "Errate Generation und genaue Pokédex-Nummer zu jedem Pokémon"
 }

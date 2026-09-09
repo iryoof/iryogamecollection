@@ -48,5 +48,7 @@
   "pleaseEnterCode": "Please enter a code",
   "arrowWords": "Arrow Words",
   "soloPuzzle": "Solo puzzle",
-  "arrowWordsDescription": "Clues sit inside the grid, a fresh puzzle every time"
+  "arrowWordsDescription": "Clues sit inside the grid, a fresh puzzle every time",
+  "pokemonQuiz": "Pokémon Quiz",
+  "pokemonQuizDescription": "Guess the generation and exact Pokédex number for each Pokémon"
 }
