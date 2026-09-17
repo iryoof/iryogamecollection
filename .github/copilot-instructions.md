@@ -1,186 +1,123 @@
-# CYPHER Project - Development Instructions
+# Iryo Gamecollection — Entwicklungshinweise
 
-## Project Overview
-Full-stack Multiplayer Reimspiel (Rap Lyrics Game) - React Frontend + Express Backend with WebSockets.
+Sammlung mehrerer Partyspiele unter einem Dach: drei Mehrspieler-Spiele über
+WebSockets und zwei Einzelspieler-Spiele, die ohne Backend laufen.
 
-## Tech Stack
+> **Die maßgebliche Beschreibung des Repos steht in `CLAUDE.md` im Wurzelverzeichnis.**
+> Dort stehen Struktur, Spiele, Socket-Konventionen und Deploy im Detail. Diese Datei
+> hier beschränkt sich auf das, was beim Schreiben von Code im Editor hilft. Bei
+> Widersprüchen gilt `CLAUDE.md` — und im Zweifel das Repo selbst, nicht diese Datei:
+> beide sind schon einmal auseinandergelaufen.
+
+## Tech-Stack
+
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS
-- **Backend**: Express.js + Socket.io + TypeScript
-- **Shared**: TypeScript Types & Utilities
+- **Backend**: Express + Socket.IO + TypeScript
+- **shared/**: gemeinsame TypeScript-Typen
+- npm-Workspace über `frontend`, `backend`, `shared`
 
-## Development Setup
+## Befehle
 
-### Environment
-1. Node.js >= 18, npm >= 9
-2. TypeScript globally installed recommended
-
-### Installation & Running
 ```bash
-# Install all dependencies
 npm install
-
-# Start dev servers (frontend + backend)
-npm run dev
-
-# Build for production
-npm run build
+npm run dev          # Frontend und Backend parallel
+npm run dev:frontend
+npm run dev:backend
+npm run build        # beide Pakete
+npm run type-check   # beide Pakete, muss vor jedem Commit sauber sein
 ```
 
-## Project Structure Guidelines
+Für das Schwedenrätsel gibt es zwei Prüf-Skripte, die mit `npx tsx` laufen müssen
+(nicht `node` — die Skripte importieren `.ts`-Dateien mit endungslosen Importen):
 
-```
-cypher/
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── services/       # API/Socket services
-│   │   ├── styles/         # CSS/Tailwind
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── public/
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── package.json
-├── backend/
-│   ├── src/
-│   │   ├── server.ts       # Express app setup
-│   │   ├── io.ts           # Socket.io handlers
-│   │   ├── game/           # Game logic
-│   │   │   ├── GameManager.ts
-│   │   │   ├── Lobby.ts
-│   │   │   └── Archive.ts
-│   │   ├── types/          # TypeScript types
-│   │   └── utils/
-│   ├── tsconfig.json
-│   └── package.json
-├── shared/
-│   └── types.ts            # Shared type definitions
-└── .github/
-    └── copilot-instructions.md
+```bash
+npx tsx scripts/check-schwedenraetsel.mjs
+npx tsx scripts/check-woerter.mjs
 ```
 
-## Key Features to Implement
+## Spiele und wo ihr Code liegt
 
-### Phase 1: Core Gameplay
-- [ ] Lobby creation & joining with codes
-- [ ] Player management (3-6 players)
-- [ ] Game state synchronization
-- [ ] Text submission & hiding
-- [ ] Ready check system
+| Spiel | Route | Seite | Logik |
+|---|---|---|---|
+| Cypher | `/cypher` | `pages/CypherGame.tsx` | `hooks/`, Backend `io.ts` |
+| Wer bin ich | `/werbinich` | `pages/WerBinIchGame.tsx` | `games/werbinich/`, Backend `werbinich.ts` |
+| Wavelength | `/wavelength` | `pages/WavelengthGame.tsx` | `games/wavelength/`, Backend `wavelength.ts` |
+| Schwedenrätsel | `/schwedenraetsel` | `pages/SchwedenraetselGame.tsx` | `games/schwedenraetsel/` |
+| Pokémon-Quiz | `/pokemonquiz` | `pages/PokemonQuizGame.tsx` | `games/pokemonquiz/` |
 
-### Phase 2: Game Mechanics
-- [ ] Timer system (60-300s, optional)
-- [ ] Round management
-- [ ] Text visibility (hide first line, show second)
-- [ ] Round progression
+Routing steht in `frontend/src/Root.tsx`. Die Routen `/kreuzwortraetsel` und
+`/wavvelength` leiten auf die heutigen Namen um — alte Links sollen weiter
+funktionieren, also nicht entfernen.
 
-### Phase 3: Polish & Archive
-- [ ] Dark mode design (black + modern)
-- [ ] Mobile optimization
-- [ ] Game archive with timestamps
-- [ ] Play again / Return to menu
+Ein neues Spiel braucht: einen Ordner unter `games/`, eine Seite unter `pages/`,
+einen Eintrag in `Root.tsx` und eine Kachel in `pages/GamePortal.tsx`.
 
-### Phase 4: Deployment
-- [ ] GitHub repository setup
-- [ ] GitHub Pages (frontend) / Render (backend) deployment
-- [ ] Production env vars
+## Socket-Events
 
-## Frontend Development
+Die drei Mehrspieler-Spiele teilen sich **eine** Socket.IO-Instanz ohne Namespaces,
+getrennt allein über Event-Namen. Die bestehenden Konventionen sind uneinheitlich:
 
-### Component Structure
-- `LobbyScreen`: Join/Create lobby
-- `GameSetup`: Player count & settings
-- `GameScreen`: Main game interface
-- `TextInput`: Player text submission
-- `ReadyCheck`: Player ready status
-- `Archive`: View past games
+- Cypher: blanke Namen — `join-lobby`, `create-lobby`
+- Wer bin ich: `lobby:create`, `game:start` — **ohne** Spielpräfix
+- Wavelength: durchgängig `wvl:` — `wvl:lobby:create`
 
-### Styling
-- Tailwind CSS for utility classes
-- Dark mode: Black backgrounds, light text
-- Mobile-first responsive design
-- No external UI libraries (keep it lean)
+Ein neues Mehrspieler-Spiel bekommt ein **eigenes Präfix**, sonst kollidiert es mit
+Wer bin ich.
 
-## Backend Development
-
-### Game Logic
-- **Lobby**: 4-char alphanumeric codes
-- **GameManager**: State management
-- **Archive**: JSON storage with date
-- **Validation**: Input sanitization
-
-### WebSocket Events
-See `shared/types.ts` for complete event definitions.
-
-Key flows:
-1. Create/Join Lobby → GameState update
-2. Start Game → Round 1 begins
-3. Player submits text → Next player gets text 2
-4. Ready check → All players must confirm
-5. Game ends → Archive created
-
-## Coding Standards
+## Coding-Standards
 
 ### TypeScript
-- Strict mode enabled
-- Interface for all object shapes
-- No `any` types unless justified
+- `strict: true` in beiden Paketen — ist gesetzt, nicht aufweichen.
+- Interfaces für Objektformen, `any` nur mit Begründung im Kommentar.
+- Typen, die Frontend und Backend teilen, gehören nach `shared/types.ts`.
 
-### Naming
-- Components: PascalCase (MyComponent.tsx)
-- Functions/Variables: camelCase
-- Constants: UPPER_SNAKE_CASE
-- Event handlers: onActionName
+### Benennung
+- Komponenten: PascalCase (`MyComponent.tsx`)
+- Funktionen und Variablen: camelCase
+- Konstanten: UPPER_SNAKE_CASE
+- Event-Handler: `onActionName`
 
-### Best Practices
-- Keep components small & focused
-- Use custom hooks for logic
-- Separate concerns (UI / Logic / API)
-- Error handling on all async operations
-- Clean up Socket listeners
+### Styling
+- Tailwind-Klassen sind der Normalfall (`tailwind.config.cjs`).
+- Farben und Flächen kommen aus den CSS-Variablen in `styles/globals.css`
+  (`--bg`, `--panel`, `--line`, `--text`, `--muted` …), nicht als feste Hex-Werte
+  im Bauteil. Dunkles Design, mobil zuerst.
+- Fertige Klassen aus `globals.css` nutzen statt neue zu erfinden:
+  `screen-shell`, `surface-panel`, `hero-title`, `section-kicker`,
+  `action-primary` / `action-secondary` / `action-danger` / `action-ghost`.
+- Keine UI-Bibliotheken dazunehmen.
 
-## Deployment Checklist
+### Sonstiges
+- Socket-Listener beim Aufräumen wieder abmelden.
+- Fehlerbehandlung bei jedem `await`.
+- Text gehört nach `frontend/src/locales/` (de/en/fr), nicht fest in die Komponente.
 
-- [ ] Environment variables set up
-- [ ] GitHub repo public
-- [ ] Frontend deployed to GitHub Pages
-- [ ] Backend deployed to Render
-- [ ] WebSocket connection working
-- [ ] Archive storage configured
-- [ ] Mobile tested on device
+## Zustand und Daten
 
-## Testing
+Kein Datenbanksystem. Lobbys liegen im Arbeitsspeicher des Backend-Prozesses,
+Archive schreibt `backend/src/saveManager.ts` als JSON auf die lokale Platte. Das
+Backend läuft auf Renders Free-Tier, schläft ein und startet neu — laufende Lobbys
+sind dann weg, Archivdateien überleben einen Neustart nicht zuverlässig.
 
-Manual testing checklist:
-- [ ] Create lobby works
-- [ ] Join lobby with code works
-- [ ] Timer counts down correctly
-- [ ] Text visibility rules correct
-- [ ] Archive saves with timestamp
-- [ ] Mobile responsive on 3+ devices
-- [ ] Dark mode works
-- [ ] Reconnection handling
+Die Einzelspieler-Spiele brauchen das Backend nicht: das Schwedenrätsel erzeugt
+seine Gitter im Browser, das Pokémon-Quiz holt seine Daten direkt aus der PokeAPI.
 
-## Common Issues & Solutions
+## Deploy
 
-### WebSocket connection fails
-- Check CORS settings in backend
-- Verify Socket.io versions match
-- Check firewall/proxy settings
+Push auf `main` → GitHub Action → `node build.js` → GitHub Pages unter
+https://iryoof.github.io/iryogamecollection/
 
-### Text not syncing
-- Ensure ready-check completed
-- Verify all players submitted text
-- Check game state consistency
+Das Backend wird davon **nicht** mitdeployed; es liegt getrennt auf Render. Die
+erlaubten Browser-Origins stehen in `backend/src/server.ts` und in `render.yaml`
+unter `FRONTEND_URL`.
 
-### Timer not working
-- Verify timer enabled in settings
-- Check client/server time sync
-- Test on different devices
+## Bekannte Stolpersteine
 
-## Notes
-- Keep game logic deterministic
-- Archive format: JSON with ISO timestamp
-- No external databases required initially
+- `npm run lint` ist derzeit wirkungslos: ESLint ist nicht installiert und es gibt
+  keine Konfigurationsdatei, das Skript endet auf `|| true`. Als Prüfung taugt
+  `npm run type-check`.
+- Beim Socket-Verbindungsaufbau zuerst die CORS-Allowlist in `server.ts` prüfen;
+  ein unbekannter Origin führt nicht zu einem Fehler, sondern zu einem stillen
+  fehlenden Header.
+- `frontend/src/games/` enthält keinen `cypher`-Ordner — dieses Spiel lebt in
+  `pages/` und `hooks/`.
