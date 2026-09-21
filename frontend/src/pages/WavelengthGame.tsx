@@ -12,6 +12,7 @@ import type {
   WavelengthSession,
   WavelengthScreen
 } from '../games/wavelength/types'
+import { useVoteKick } from '../hooks/useVoteKick'
 import '../styles/globals.css'
 
 // Keeps the historical (misspelled) key so sessions that were stored before the
@@ -53,6 +54,7 @@ export default function WavelengthGame() {
   // `screen` state directly. This ref mirrors whether the lobby has left the
   // waiting room, which decides if the reconnect window is limited or open.
   const gameRunningRef = useRef(false)
+  const voteKickApi = useVoteKick(socket, 'wvl:', setError)
 
   const persistSession = (nextSession: WavelengthSession | null) => {
     sessionRef.current = nextSession
@@ -293,6 +295,7 @@ export default function WavelengthGame() {
         error={error}
         onError={setError}
         onLeave={handleMenuClose}
+        voteKick={voteKickApi}
       />
     )
   }
@@ -309,7 +312,7 @@ export default function WavelengthGame() {
   }
 
   if (screen === 'game' && gameData) {
-    return <Game socket={socket} gameState={gameData} onError={setError} />
+    return <Game socket={socket} gameState={gameData} onError={setError} voteKick={voteKickApi} />
   }
 
   if (screen === 'result' && gameData) {

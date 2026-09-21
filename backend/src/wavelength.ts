@@ -2,6 +2,16 @@
 import { Server as SocketIOServer, Socket } from 'socket.io'
 import { WavelengthGameManager } from './game/WavelengthGameManager'
 import { WavelengthLobby, WavelengthPlayer } from './game/WavelengthLobby'
+import {
+  cancelVoteKick,
+  castVoteKickVote,
+  getVoteKick,
+  isVoteKickTarget,
+  refreshVoteKick,
+  startVoteKick,
+  VoteKickOutcome,
+  VoteKickState
+} from './game/VoteKick'
 
 const RECONNECT_GRACE_MS = 120_000
 const wavelengthGameManager = new WavelengthGameManager()
@@ -168,6 +178,61 @@ function handleRosterChange(io: SocketIOServer, lobby: WavelengthLobby) {
   broadcastCurrentState(io, lobby)
 }
 
+/**
+ * Remove a player and tell them why. Shared by the host kick and the vote kick.
+ */
+async function evictPlayer(
+  io: SocketIOServer,
+  code: string,
+  targetId: string,
+  reason: string
+): Promise<void> {
+  cancelEviction(targetId)
+
+  // Take the target out of the lobby room before the roster broadcast, so a
+  // late state update cannot arrive after 'wvl:lobby:kicked' and put the kicked
+  // client back on the lobby screen. The per-player room stays joined until
+  // after the emit, otherwise the notice would go nowhere.
+  const targetSockets = await io.in(targetId).fetchSockets()
+  for (const targetSocket of targetSockets) {
+    targetSocket.leave(code)
+  }
+  io.to(targetId).emit('wvl:lobby:kicked', reason)
+
+  wavelengthGameManager.removePlayer(targetId)
+  const remainingLobby = wavelengthGameManager.findLobbyByCode(code)
+  if (!remainingLobby) {
+    cancelVoteKick(code)
+    return
+  }
+  // Cancel an open vote only if it was about the player who just left; for
+  // anyone else the tally merely has one voter fewer.
+  refreshVoteKick(code, !isVoteKickTarget(code, targetId))
+  handleRosterChange(io, remainingLobby)
+}
+
+/** Connected players who may vote on kicking `targetId`. */
+function voteKickEligibleIds(code: string, targetId: string): string[] {
+  const lobby = wavelengthGameManager.findLobbyByCode(code)
+  if (!lobby) return []
+  return lobby
+    .getPlayers()
+    .filter(player => player.id !== targetId && !player.isDisconnected)
+    .map(player => player.id)
+}
+
+function handleVoteKickChange(io: SocketIOServer, code: string, targetId: string, targetName: string) {
+  return (state: VoteKickState | null, outcome: VoteKickOutcome | null) => {
+    io.to(code).emit('wvl:votekick:state', state)
+    if (!outcome) return
+
+    io.to(code).emit('wvl:votekick:result', { targetName, outcome })
+    if (outcome !== 'passed') return
+
+    void evictPlayer(io, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+  }
+}
+
 function scheduleEviction(io: SocketIOServer, playerId: string) {
   cancelEviction(playerId)
   const timer = setTimeout(() => {
@@ -283,6 +348,10 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         lobby.markConnected(player.id)
         attachSocketToPlayer(socket, lobby, player)
         callback?.({ ok: true, session: buildSession(lobby, player) })
+        // Coming back changes the eligible voter count, and the returning
+        // client needs to see an open vote at all.
+        refreshVoteKick(lobby.getCode(), true)
+        socket.emit('wvl:votekick:state', getVoteKick(lobby.getCode()))
         broadcastCurrentState(io, lobby)
       } catch (error: any) {
         callback?.({ error: error.message })
@@ -469,6 +538,7 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         const code = lobby.getCode()
         lobby.getPlayers().forEach(player => cancelEviction(player.id))
         io.to(code).emit('wvl:lobby:closed')
+        cancelVoteKick(code)
         wavelengthGameManager.removeLobby(code)
         callback?.({ ok: true })
       } catch (error: any) {
@@ -497,6 +567,7 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         const code = lobby.getCode()
         lobby.getPlayers().forEach(player => cancelEviction(player.id))
         io.to(code).emit('wvl:lobby:closed')
+        cancelVoteKick(code)
         wavelengthGameManager.removeLobby(code)
         callback?.({ ok: true })
       } catch (error: any) {
@@ -525,10 +596,72 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         socket.leave(playerId)
 
         const remainingLobby = wavelengthGameManager.findLobbyByCode(code)
-        if (remainingLobby) {
-          handleRosterChange(io, remainingLobby)
+        if (!remainingLobby) {
+          cancelVoteKick(code)
+          callback?.({ ok: true })
+          return
+        }
+        refreshVoteKick(code, !isVoteKickTarget(code, playerId))
+        handleRosterChange(io, remainingLobby)
+
+        callback?.({ ok: true })
+      } catch (error: any) {
+        callback?.({ error: error.message })
+      }
+    })
+
+    // Start a vote to kick a player. Open to every connected player, not only
+    // the host, so a lobby can clear out a troublemaker on its own.
+    socket.on('wvl:votekick:start', (targetId: string, callback?: (response: WavelengthAck) => void) => {
+      try {
+        const playerId = socket.data.wavelengthPlayerId as string | undefined
+        if (!playerId) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
         }
 
+        const lobby = wavelengthGameManager.findLobbyByPlayerId(playerId)
+        if (!lobby) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+
+        const target = lobby.getPlayer(targetId)
+        if (!target) {
+          callback?.({ error: 'Spieler nicht in der Lobby.' })
+          return
+        }
+
+        const code = lobby.getCode()
+        startVoteKick({
+          lobbyCode: code,
+          targetId,
+          targetName: target.name,
+          initiatorId: playerId,
+          getEligibleIds: () => voteKickEligibleIds(code, targetId),
+          onChange: handleVoteKickChange(io, code, targetId, target.name)
+        })
+        callback?.({ ok: true })
+      } catch (error: any) {
+        callback?.({ error: error.message })
+      }
+    })
+
+    socket.on('wvl:votekick:vote', (approve: boolean, callback?: (response: WavelengthAck) => void) => {
+      try {
+        const playerId = socket.data.wavelengthPlayerId as string | undefined
+        if (!playerId) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+
+        const lobby = wavelengthGameManager.findLobbyByPlayerId(playerId)
+        if (!lobby) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+
+        castVoteKickVote(lobby.getCode(), playerId, approve)
         callback?.({ ok: true })
       } catch (error: any) {
         callback?.({ error: error.message })
@@ -562,25 +695,7 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
           return
         }
 
-        const code = lobby.getCode()
-        cancelEviction(targetId)
-
-        // Take the target out of the lobby room before the roster broadcast, so
-        // a late state update cannot arrive after 'wvl:lobby:kicked' and put the
-        // kicked client back on the lobby screen. The per-player room stays
-        // joined until after the emit, otherwise the notice would go nowhere.
-        const targetSockets = await io.in(targetId).fetchSockets()
-        for (const targetSocket of targetSockets) {
-          targetSocket.leave(code)
-        }
-        io.to(targetId).emit('wvl:lobby:kicked', 'Du wurdest aus der Lobby entfernt.')
-
-        wavelengthGameManager.removePlayer(targetId)
-        const remainingLobby = wavelengthGameManager.findLobbyByCode(code)
-        if (remainingLobby) {
-          handleRosterChange(io, remainingLobby)
-        }
-
+        await evictPlayer(io, lobby.getCode(), targetId, 'Du wurdest aus der Lobby entfernt.')
         callback?.({ ok: true })
       } catch (error: any) {
         callback?.({ error: error.message })
@@ -607,6 +722,9 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         } else {
           scheduleEviction(io, playerId)
         }
+        // Dropping out removes the player from the eligible voters, so an open
+        // vote can tip over because of it.
+        refreshVoteKick(lobby.getCode(), true)
         broadcastCurrentState(io, lobby)
       } catch (error) {
         console.error('Wavelength disconnect error:', error)

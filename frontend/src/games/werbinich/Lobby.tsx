@@ -1,5 +1,7 @@
 ﻿import type { Socket } from 'socket.io-client'
 import type { WerBinIchAck, WerBinIchLobbyState } from './types'
+import VoteKickPanel, { VoteKickButton } from '../../components/VoteKickPanel'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface LobbyProps {
   socket: Socket
@@ -7,9 +9,10 @@ interface LobbyProps {
   selfPlayerId: string | null
   error: string
   onError: (message: string) => void
+  voteKick: VoteKickApi
 }
 
-export default function Lobby({ socket, lobby, selfPlayerId, error, onError }: LobbyProps) {
+export default function Lobby({ socket, lobby, selfPlayerId, error, onError, voteKick }: LobbyProps) {
   const me = lobby.players.find(player => player.id === selfPlayerId)
   const isHost = !!me?.isHost
 
@@ -51,6 +54,11 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError }: L
             </p>
           </div>
 
+          <VoteKickPanel vote={voteKick.vote} selfPlayerId={selfPlayerId} onVote={voteKick.castVote} />
+          {voteKick.notice && (
+            <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+          )}
+
           <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
@@ -85,6 +93,13 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError }: L
                       )}
                       {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
+                      )}
+                      {player.id !== selfPlayerId && (
+                        <VoteKickButton
+                          playerName={player.name}
+                          onStart={() => voteKick.startVoteKick(player.id)}
+                          disabled={!!voteKick.vote}
+                        />
                       )}
                       {isHost && player.id !== selfPlayerId && (
                         <button

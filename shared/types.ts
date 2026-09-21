@@ -88,3 +88,27 @@ export interface GameRound {
   texts: TextEntry[];
   isActive: boolean;
 }
+
+/**
+ * State of an open vote kick, shared by all three multiplayer games. Null on
+ * the wire means "no vote running".
+ */
+export interface VoteKickState {
+  targetId: string;
+  targetName: string;
+  initiatorId: string;
+  approvedBy: string[];
+  rejectedBy: string[];
+  /** Yes votes needed in total for the kick to go through. */
+  needed: number;
+  /** Connected players allowed to vote (the target is not one of them). */
+  eligible: number;
+  expiresAt: number;
+}
+
+export type VoteKickOutcome = 'passed' | 'failed' | 'expired' | 'cancelled';
+
+export interface VoteKickResult {
+  targetName: string;
+  outcome: VoteKickOutcome;
+}

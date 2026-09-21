@@ -7,6 +7,7 @@ import TextInput from '../components/TextInput'
 import TwoLineInput from '../components/TwoLineInput'
 import Timer from '../components/Timer'
 import PlayerStatusList from '../components/PlayerStatusList'
+import VoteKickPanel from '../components/VoteKickPanel'
 import { saveArchive } from '../services/archiveService'
 
 interface GameScreenProps {
@@ -18,7 +19,10 @@ interface GameScreenProps {
 type GamePhase = 'waiting' | 'writing' | 'round-complete' | 'voting' | 'voting-results' | 'finished'
 
 export default function GameScreen({ socket, onNavigate, game }: GameScreenProps) {
-  const { gameState, submitText, submitVote, startGame, clearSession } = game
+  const {
+    gameState, submitText, submitVote, startGame, clearSession,
+    voteKick, startVoteKick, castVoteKickVote
+  } = game
   const [phase, setPhase] = useState<GamePhase>('waiting')
   const [hasSubmitted, setHasSubmitted] = useState(false)
   const [promptText, setPromptText] = useState<string>('')
@@ -324,11 +328,15 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                 </div>
               )}
 
+              <VoteKickPanel vote={voteKick} selfPlayerId={playerId} onVote={castVoteKickVote} />
+
               <PlayerStatusList
                 players={gameState.players}
                 submittedPlayerIds={gameState.submittedPlayerIds || []}
                 disconnectedPlayerIds={gameState.disconnectedPlayerIds || []}
                 selfId={playerId}
+                onStartVoteKick={startVoteKick}
+                voteKickDisabled={!!voteKick}
               />
             </div>
           )}
@@ -384,11 +392,15 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                   />
                 ))}
               </div>
+              <VoteKickPanel vote={voteKick} selfPlayerId={playerId} onVote={castVoteKickVote} />
+
               <PlayerStatusList
                 players={gameState.players}
                 submittedPlayerIds={gameState.submittedPlayerIds || []}
                 disconnectedPlayerIds={gameState.disconnectedPlayerIds || []}
                 selfId={playerId}
+                onStartVoteKick={startVoteKick}
+                voteKickDisabled={!!voteKick}
               />
             </div>
           )}

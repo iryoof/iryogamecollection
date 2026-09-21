@@ -1,4 +1,5 @@
 import { Player } from '../../../shared/types'
+import { VoteKickButton } from './VoteKickPanel'
 
 interface PlayerStatusListProps {
   players: Player[]
@@ -6,6 +7,10 @@ interface PlayerStatusListProps {
   disconnectedPlayerIds: string[]
   selfId?: string
   title?: string
+  /** Omitted where a vote kick does not apply (e.g. read-only views). */
+  onStartVoteKick?: (playerId: string) => void
+  /** True while another vote is already running. */
+  voteKickDisabled?: boolean
 }
 
 /**
@@ -17,7 +22,9 @@ export default function PlayerStatusList({
   submittedPlayerIds,
   disconnectedPlayerIds,
   selfId,
-  title = 'Abgabestatus'
+  title = 'Abgabestatus',
+  onStartVoteKick,
+  voteKickDisabled
 }: PlayerStatusListProps) {
   if (!players.length) return null
   const submitted = new Set(submittedPlayerIds)
@@ -53,8 +60,17 @@ export default function PlayerStatusList({
                 {player.nickname}
                 {isSelf && <span className="text-xs text-gray-500 ml-1">(du)</span>}
               </span>
-              <span className={`text-xs ${status.tone}`}>
-                {status.icon} {status.label}
+              <span className="flex items-center gap-2">
+                <span className={`text-xs ${status.tone}`}>
+                  {status.icon} {status.label}
+                </span>
+                {onStartVoteKick && !isSelf && (
+                  <VoteKickButton
+                    playerName={player.nickname}
+                    onStart={() => onStartVoteKick(player.id)}
+                    disabled={voteKickDisabled}
+                  />
+                )}
               </span>
             </li>
           )

@@ -2,14 +2,18 @@
 import type { Socket } from 'socket.io-client'
 import Notepad from './Notepad'
 import type { WerBinIchAck, WerBinIchGameState } from './types'
+import VoteKickPanel, { VoteKickButton } from '../../components/VoteKickPanel'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface GameProps {
   socket: Socket
   game: WerBinIchGameState
   myName: string
+  selfPlayerId: string | null
+  voteKick: VoteKickApi
 }
 
-export default function Game({ socket, game, myName }: GameProps) {
+export default function Game({ socket, game, myName, selfPlayerId, voteKick }: GameProps) {
   const [word, setWord] = useState('')
   const [newWordTarget, setNewWordTarget] = useState<string | null>(null)
   const [newWord, setNewWord] = useState('')
@@ -224,6 +228,11 @@ export default function Game({ socket, game, myName }: GameProps) {
               )}
             </div>
 
+            <VoteKickPanel vote={voteKick.vote} selfPlayerId={selfPlayerId} onVote={voteKick.castVote} />
+            {voteKick.notice && (
+              <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+            )}
+
             <div className="screen-shell rounded-[2rem] p-5 space-y-4">
               <div>
                 <p className="section-kicker">Teilnehmer</p>
@@ -246,6 +255,13 @@ export default function Game({ socket, game, myName }: GameProps) {
                         <span className="status-chip border-white/18 bg-white/10 text-zinc-100">
                           Host
                         </span>
+                      )}
+                      {player.id !== selfPlayerId && (
+                        <VoteKickButton
+                          playerName={player.name}
+                          onStart={() => voteKick.startVoteKick(player.id)}
+                          disabled={!!voteKick.vote}
+                        />
                       )}
                     </div>
                   </div>

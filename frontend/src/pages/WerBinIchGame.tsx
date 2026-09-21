@@ -10,6 +10,7 @@ import type {
   WerBinIchSession,
   WerBinIchScreen
 } from '../games/werbinich/types'
+import { useVoteKick } from '../hooks/useVoteKick'
 import '../styles/globals.css'
 
 const SESSION_STORAGE_KEY = 'werbinich:session'
@@ -49,6 +50,7 @@ export default function WerBinIchGame() {
   // `screen` state directly. This ref mirrors whether a game is already
   // running, which decides if the reconnect window is limited or open-ended.
   const gameRunningRef = useRef(false)
+  const voteKickApi = useVoteKick(socket, 'lobby:', setError)
 
   const persistSession = (nextSession: WerBinIchSession | null) => {
     sessionRef.current = nextSession
@@ -334,6 +336,7 @@ export default function WerBinIchGame() {
             selfPlayerId={session?.playerId || null}
             error={error}
             onError={setError}
+            voteKick={voteKickApi}
           />
         )}
 
@@ -342,6 +345,8 @@ export default function WerBinIchGame() {
             socket={socket}
             game={gameData}
             myName={myName}
+            selfPlayerId={session?.playerId || null}
+            voteKick={voteKickApi}
           />
         )}
       </div>

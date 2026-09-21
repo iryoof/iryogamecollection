@@ -1,6 +1,16 @@
 import { Server as SocketIOServer, Socket } from 'socket.io'
 import { GameManager } from './game/GameManager'
 import { Lobby } from './game/Lobby'
+import {
+  cancelVoteKick,
+  castVoteKickVote,
+  getVoteKick,
+  isVoteKickTarget,
+  refreshVoteKick,
+  startVoteKick,
+  VoteKickOutcome,
+  VoteKickState
+} from './game/VoteKick'
 
 // Window within which a disconnected player may reconnect before being
 // evicted. Only applies while the lobby is still in the waiting room — during
@@ -53,6 +63,76 @@ function scheduleEviction(
 function keepsSeatIndefinitely(lobby: Lobby): boolean {
   const state = lobby.getState()
   return state.gameStarted && !state.gameEnded
+}
+
+/**
+ * Remove a player from a lobby and tell them why. Shared by the host kick and
+ * the vote kick.
+ */
+async function evictPlayer(
+  io: SocketIOServer,
+  gameManager: GameManager,
+  code: string,
+  targetId: string,
+  reason: string
+): Promise<void> {
+  cancelEviction(targetId)
+  // Force the target's socket(s) out of the lobby room BEFORE we broadcast the
+  // post-kick state so they don't receive a final state-update that would
+  // overwrite the 'kicked' handling on the client.
+  const targetSockets = await io.in(targetId).fetchSockets()
+  for (const s of targetSockets) {
+    s.leave(code)
+  }
+  io.to(targetId).emit('kicked', reason)
+  gameManager.removePlayer(targetId)
+  const remaining = gameManager.findLobbyByCode(code)
+  if (!remaining) {
+    cancelVoteKick(code)
+    return
+  }
+  // Cancel an open vote only if it was about the player who just left; for
+  // anyone else the tally merely has one voter fewer.
+  refreshVoteKick(code, !isVoteKickTarget(code, targetId))
+  io.to(code).emit('state-update', remaining.getState())
+  finalizeIfPhaseComplete(io, gameManager, remaining)
+}
+
+/** Connected players who may vote on kicking `targetId`. */
+function voteKickEligibleIds(
+  gameManager: GameManager,
+  code: string,
+  targetId: string
+): string[] {
+  const lobby = gameManager.findLobbyByCode(code)
+  if (!lobby) return []
+  return lobby
+    .getState()
+    .players.filter(player => player.id !== targetId && !lobby.isDisconnected(player.id))
+    .map(player => player.id)
+}
+
+/**
+ * Broadcast an open vote (or its result) and carry out the kick when it passed.
+ */
+function handleVoteKickChange(
+  io: SocketIOServer,
+  gameManager: GameManager,
+  code: string,
+  targetId: string,
+  targetName: string
+) {
+  return (state: VoteKickState | null, outcome: VoteKickOutcome | null) => {
+    io.to(code).emit('votekick:state', state)
+    if (!outcome) return
+
+    if (outcome === 'passed') {
+      void evictPlayer(io, gameManager, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+      io.to(code).emit('votekick:result', { targetName, outcome })
+      return
+    }
+    io.to(code).emit('votekick:result', { targetName, outcome })
+  }
 }
 
 /**
@@ -114,6 +194,10 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
         cancelEviction(clientId)
         lobby.markReconnected(clientId)
         socket.emit('lobby-joined', lobby.getState())
+        // Coming back changes the eligible voter count, so an open vote needs
+        // to be re-tallied — and the returning client needs to see it at all.
+        refreshVoteKick(lobby.getCode(), true)
+        socket.emit('votekick:state', getVoteKick(lobby.getCode()))
         io.to(lobby.getCode()).emit('state-update', lobby.getState())
         console.log(`${nickname} joined lobby ${code}`)
       } catch (error: any) {
@@ -202,11 +286,13 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
         if (wasLastPlayer) {
           // Lobby was removed by removePlayer because it became empty; nothing
           // else to broadcast.
+          cancelVoteKick(code)
           return
         }
 
         const remaining = gameManager.findLobbyByCode(code)
         if (!remaining) return
+        refreshVoteKick(code, !isVoteKickTarget(code, playerId))
         io.to(code).emit('state-update', remaining.getState())
         finalizeIfPhaseComplete(io, gameManager, remaining)
       } catch (error: any) {
@@ -227,6 +313,7 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
         const code = lobby.getCode()
         io.to(code).emit('lobby-closed')
         lobby.getPlayers().forEach(p => cancelEviction(p.id))
+        cancelVoteKick(code)
         gameManager.removeLobby(code)
       } catch (error: any) {
         socket.emit('error', error.message)
@@ -249,22 +336,47 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
           throw new Error('Spieler nicht in der Lobby')
         }
 
+        await evictPlayer(io, gameManager, lobby.getCode(), targetId, 'Du wurdest aus der Lobby entfernt.')
+      } catch (error: any) {
+        socket.emit('error', error.message)
+      }
+    })
+
+    // Start a vote to kick a player. Open to every connected player, not just
+    // the host — the point is that a lobby can protect itself without needing
+    // the host to be around.
+    socket.on('votekick:start', (targetId: string) => {
+      try {
+        const playerId = socket.data.playerId || socket.id
+        const lobby = gameManager.findLobbyByPlayerId(playerId)
+        if (!lobby) throw new Error('Lobby not found')
+        if (!targetId || !lobby.hasPlayer(targetId)) {
+          throw new Error('Spieler nicht in der Lobby')
+        }
+
         const code = lobby.getCode()
-        cancelEviction(targetId)
-        // Force the target's socket(s) out of the lobby room BEFORE we broadcast
-        // the post-kick state so they don't receive a final state-update that
-        // would overwrite the 'kicked' handling on the client.
-        const targetSockets = await io.in(targetId).fetchSockets()
-        for (const s of targetSockets) {
-          s.leave(code)
-        }
-        io.to(targetId).emit('kicked', 'Du wurdest aus der Lobby entfernt.')
-        gameManager.removePlayer(targetId)
-        const remaining = gameManager.findLobbyByCode(code)
-        if (remaining) {
-          io.to(code).emit('state-update', remaining.getState())
-          finalizeIfPhaseComplete(io, gameManager, remaining)
-        }
+        const target = lobby.getState().players.find(player => player.id === targetId)
+        const targetName = target?.nickname || 'Spieler'
+
+        startVoteKick({
+          lobbyCode: code,
+          targetId,
+          targetName,
+          initiatorId: playerId,
+          getEligibleIds: () => voteKickEligibleIds(gameManager, code, targetId),
+          onChange: handleVoteKickChange(io, gameManager, code, targetId, targetName)
+        })
+      } catch (error: any) {
+        socket.emit('error', error.message)
+      }
+    })
+
+    socket.on('votekick:vote', (approve: boolean) => {
+      try {
+        const playerId = socket.data.playerId || socket.id
+        const lobby = gameManager.findLobbyByPlayerId(playerId)
+        if (!lobby) throw new Error('Lobby not found')
+        castVoteKickVote(lobby.getCode(), playerId, approve)
       } catch (error: any) {
         socket.emit('error', error.message)
       }
@@ -441,6 +553,9 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
       } else {
         scheduleEviction(io, gameManager, lobby, playerId)
       }
+      // Dropping out removes the player from the eligible voters, so an open
+      // vote can tip over because of it.
+      refreshVoteKick(lobby.getCode(), true)
       io.to(lobby.getCode()).emit('state-update', lobby.getState())
     })
 

@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Socket } from 'socket.io-client'
-import { GameState } from '../../../shared/types'
+import { GameState, VoteKickResult, VoteKickState } from '../../../shared/types'
 
 export interface GameSocketApi {
   gameState: GameState | null
   error: string
   loading: boolean
   kickedReason: string
+  voteKick: VoteKickState | null
+  voteKickNotice: string
+  startVoteKick: (targetId: string) => void
+  castVoteKickVote: (approve: boolean) => void
+  clearVoteKickNotice: () => void
   joinLobby: (code: string, nickname: string) => void
   createLobby: (nickname: string, playerCount: number, timerEnabled: boolean, timerSeconds: number) => void
   submitText: (text: string) => void
@@ -46,12 +51,15 @@ export function useGameSocket(socket: Socket | null): GameSocketApi {
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [kickedReason, setKickedReason] = useState<string>('')
+  const [voteKick, setVoteKick] = useState<VoteKickState | null>(null)
+  const [voteKickNotice, setVoteKickNotice] = useState<string>('')
   const gameStateRef = useRef<GameState | null>(null)
 
   const clearSession = useCallback(() => {
     setGameState(null)
     setLoading(false)
     setError('')
+    setVoteKick(null)
     gameStateRef.current = null
     sessionStorage.removeItem(LOBBY_CODE_KEY)
     sessionStorage.removeItem(GAME_STATE_KEY)
@@ -99,6 +107,20 @@ export function useGameSocket(socket: Socket | null): GameSocketApi {
       clearSession()
     })
 
+    socket.on('votekick:state', (state: VoteKickState | null) => {
+      setVoteKick(state)
+    })
+
+    socket.on('votekick:result', ({ targetName, outcome }: VoteKickResult) => {
+      setVoteKick(null)
+      if (outcome === 'cancelled') return
+      setVoteKickNotice(
+        outcome === 'passed'
+          ? `${targetName} wurde per Abstimmung entfernt.`
+          : `Die Abstimmung über ${targetName} ist gescheitert.`
+      )
+    })
+
     socket.on('kicked', (reason: string) => {
       setKickedReason(reason || 'Du wurdest aus der Lobby entfernt.')
       clearSession()
@@ -131,6 +153,8 @@ export function useGameSocket(socket: Socket | null): GameSocketApi {
       socket.off('lobby-created')
       socket.off('state-update')
       socket.off('lobby-closed')
+      socket.off('votekick:state')
+      socket.off('votekick:result')
       socket.off('kicked')
       socket.off('error')
       socket.off('connect_error')
@@ -217,8 +241,28 @@ export function useGameSocket(socket: Socket | null): GameSocketApi {
     socket.emit('transfer-host', newHostId)
   }, [socket])
 
+  const startVoteKick = useCallback((targetId: string) => {
+    if (!socket?.connected) {
+      setError('Nicht mit Server verbunden')
+      return
+    }
+    socket.emit('votekick:start', targetId)
+  }, [socket])
+
+  const castVoteKickVote = useCallback((approve: boolean) => {
+    if (!socket?.connected) {
+      setError('Nicht mit Server verbunden')
+      return
+    }
+    socket.emit('votekick:vote', approve)
+  }, [socket])
+
   const clearKickedReason = useCallback(() => {
     setKickedReason('')
+  }, [])
+
+  const clearVoteKickNotice = useCallback(() => {
+    setVoteKickNotice('')
   }, [])
 
   return {
@@ -226,6 +270,11 @@ export function useGameSocket(socket: Socket | null): GameSocketApi {
     error,
     loading,
     kickedReason,
+    voteKick,
+    voteKickNotice,
+    startVoteKick,
+    castVoteKickVote,
+    clearVoteKickNotice,
     joinLobby,
     createLobby,
     submitText,

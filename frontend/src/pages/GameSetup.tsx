@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Socket } from 'socket.io-client'
 import { PageType } from '../types'
 import type { GameSocketApi } from '../hooks/useGameSocket'
+import VoteKickPanel, { VoteKickButton } from '../components/VoteKickPanel'
 
 interface GameSetupProps {
   socket: Socket | null
@@ -13,7 +14,8 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
   const {
     gameState, error, loading,
     leaveLobby, closeLobby, clearSession, startGame,
-    kickPlayer, transferHost
+    kickPlayer, transferHost,
+    voteKick, voteKickNotice, startVoteKick, castVoteKickVote
   } = game
   const [timerEnabled, setTimerEnabled] = useState(false)
   const [timerSeconds, setTimerSeconds] = useState(60)
@@ -164,6 +166,11 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
             </p>
           </div>
 
+          <VoteKickPanel vote={voteKick} selfPlayerId={selfId} onVote={castVoteKickVote} />
+          {voteKickNotice && (
+            <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKickNotice}</div>
+          )}
+
           <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
@@ -207,24 +214,33 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                           </div>
                         </div>
 
-                        {isHost && !isSelf && !isDisconnected && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleTransferHost(player.id, player.nickname)}
-                              title="Host-Rolle übertragen"
-                              className="action-secondary px-3 py-2 text-[11px]"
-                            >
-                              Host geben
-                            </button>
-                            <button
-                              onClick={() => handleKickPlayer(player.id, player.nickname)}
-                              title="Spieler entfernen"
-                              className="action-danger px-3 py-2 text-[11px]"
-                            >
-                              Entfernen
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {!isSelf && (
+                            <VoteKickButton
+                              playerName={player.nickname}
+                              onStart={() => startVoteKick(player.id)}
+                              disabled={!!voteKick}
+                            />
+                          )}
+                          {isHost && !isSelf && !isDisconnected && (
+                            <>
+                              <button
+                                onClick={() => handleTransferHost(player.id, player.nickname)}
+                                title="Host-Rolle übertragen"
+                                className="action-secondary px-3 py-2 text-[11px]"
+                              >
+                                Host geben
+                              </button>
+                              <button
+                                onClick={() => handleKickPlayer(player.id, player.nickname)}
+                                title="Spieler entfernen"
+                                className="action-danger px-3 py-2 text-[11px]"
+                              >
+                                Entfernen
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )

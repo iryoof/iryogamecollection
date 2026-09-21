@@ -1,5 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { Server as SocketIOServer, Socket } from 'socket.io'
+import {
+  cancelVoteKick,
+  castVoteKickVote,
+  getVoteKick,
+  isVoteKickTarget,
+  refreshVoteKick,
+  startVoteKick,
+  VoteKickOutcome,
+  VoteKickState
+} from './game/VoteKick'
 
 const RECONNECT_GRACE_MS = 120_000
 
@@ -284,6 +294,9 @@ function markPlayerDisconnected(io: SocketIOServer, lobby: WerBinIchLobby, playe
   if (!player || player.isDisconnected) return
 
   player.isDisconnected = true
+  // Dropping out removes the player from the eligible voters, so an open vote
+  // can tip over because of it.
+  refreshVoteKick(lobby.code, true)
 
   // Once the game is running the seat is held without a deadline: the player
   // holds a word somebody else wrote for them, so evicting them mid-round would
@@ -308,6 +321,59 @@ function clearPlayerReconnectState(player: WerBinIchPlayer) {
   player.reconnectDeadline = null
   player.isDisconnected = false
   cancelEviction(player.id)
+}
+
+/**
+ * Remove a player and tell them why. Shared by the host kick and the vote kick.
+ */
+async function evictPlayer(
+  io: SocketIOServer,
+  lobby: WerBinIchLobby,
+  targetId: string,
+  reason: string
+): Promise<void> {
+  // Take the target out of the lobby room before the roster broadcast, so a
+  // late lobby:update cannot arrive after 'lobby:kicked' and put the kicked
+  // client back on the lobby screen. The per-player room stays joined until
+  // after the emit, otherwise the notice would go nowhere.
+  const targetSockets = await io.in(targetId).fetchSockets()
+  for (const targetSocket of targetSockets) {
+    targetSocket.leave(lobby.code)
+  }
+  io.to(targetId).emit('lobby:kicked', reason)
+
+  const code = lobby.code
+  removePlayerFromLobby(io, lobby, targetId)
+  if (!werBinIchLobbies.has(code)) {
+    cancelVoteKick(code)
+    return
+  }
+  // Cancel an open vote only if it was about the player who just left; for
+  // anyone else the tally merely has one voter fewer.
+  refreshVoteKick(code, !isVoteKickTarget(code, targetId))
+}
+
+/** Connected players who may vote on kicking `targetId`. */
+function voteKickEligibleIds(lobbyCode: string, targetId: string): string[] {
+  const lobby = werBinIchLobbies.get(lobbyCode)
+  if (!lobby) return []
+  return lobby.players
+    .filter(player => player.id !== targetId && !player.isDisconnected)
+    .map(player => player.id)
+}
+
+function handleVoteKickChange(io: SocketIOServer, lobbyCode: string, targetId: string, targetName: string) {
+  return (state: VoteKickState | null, outcome: VoteKickOutcome | null) => {
+    io.to(lobbyCode).emit('lobby:votekick:state', state)
+    if (!outcome) return
+
+    io.to(lobbyCode).emit('lobby:votekick:result', { targetName, outcome })
+    if (outcome !== 'passed') return
+
+    const lobby = werBinIchLobbies.get(lobbyCode)
+    if (!lobby) return
+    void evictPlayer(io, lobby, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+  }
 }
 
 export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
@@ -398,6 +464,11 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
       } else {
         broadcastGameState(io, lobby)
       }
+
+      // Coming back changes the eligible voter count, and the returning client
+      // needs to see an open vote at all.
+      refreshVoteKick(lobby.code, true)
+      socket.emit('lobby:votekick:state', getVoteKick(lobby.code))
 
       callback?.({ ok: true, session: buildSession(lobby, player) })
     })
@@ -551,7 +622,13 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
       if (!playerId) return
       const lobby = findLobbyByPlayerId(playerId)
       if (!lobby) return
+      const code = lobby.code
       removePlayerFromLobby(io, lobby, playerId)
+      if (!werBinIchLobbies.has(code)) {
+        cancelVoteKick(code)
+        return
+      }
+      refreshVoteKick(code, !isVoteKickTarget(code, playerId))
     })
 
     // Remove a specific player from the lobby (host only).
@@ -582,18 +659,65 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         return
       }
 
-      // Take the target out of the lobby room before the roster broadcast, so a
-      // late lobby:update cannot arrive after 'lobby:kicked' and put the kicked
-      // client back on the lobby screen. The per-player room stays joined until
-      // after the emit, otherwise the notice would go nowhere.
-      const targetSockets = await io.in(targetId).fetchSockets()
-      for (const targetSocket of targetSockets) {
-        targetSocket.leave(lobby.code)
-      }
-      io.to(targetId).emit('lobby:kicked', 'Du wurdest aus der Lobby entfernt.')
-
-      removePlayerFromLobby(io, lobby, targetId)
+      await evictPlayer(io, lobby, targetId, 'Du wurdest aus der Lobby entfernt.')
       callback?.({ ok: true })
+    })
+
+    // Start a vote to kick a player. Open to every connected player, not only
+    // the host, so a lobby can clear out a troublemaker on its own.
+    socket.on('lobby:votekick:start', (targetId: string, callback?: (payload: AckPayload) => void) => {
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) {
+        callback?.({ error: 'Session ungueltig.' })
+        return
+      }
+
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby) {
+        callback?.({ error: 'Lobby nicht gefunden.' })
+        return
+      }
+
+      const target = lobby.players.find(entry => entry.id === targetId)
+      if (!target) {
+        callback?.({ error: 'Spieler nicht in der Lobby.' })
+        return
+      }
+
+      try {
+        startVoteKick({
+          lobbyCode: lobby.code,
+          targetId,
+          targetName: target.name,
+          initiatorId: playerId,
+          getEligibleIds: () => voteKickEligibleIds(lobby.code, targetId),
+          onChange: handleVoteKickChange(io, lobby.code, targetId, target.name)
+        })
+        callback?.({ ok: true })
+      } catch (error: any) {
+        callback?.({ error: error.message })
+      }
+    })
+
+    socket.on('lobby:votekick:vote', (approve: boolean, callback?: (payload: AckPayload) => void) => {
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) {
+        callback?.({ error: 'Session ungueltig.' })
+        return
+      }
+
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby) {
+        callback?.({ error: 'Lobby nicht gefunden.' })
+        return
+      }
+
+      try {
+        castVoteKickVote(lobby.code, playerId, approve)
+        callback?.({ ok: true })
+      } catch (error: any) {
+        callback?.({ error: error.message })
+      }
     })
 
     socket.on('lobby:close', () => {
@@ -609,6 +733,7 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         cancelEviction(entry.id)
         io.to(entry.id).emit('lobby:closed')
       })
+      cancelVoteKick(lobby.code)
       werBinIchLobbies.delete(lobby.code)
     })
 
@@ -625,6 +750,7 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         cancelEviction(entry.id)
         io.to(entry.id).emit('lobby:closed')
       })
+      cancelVoteKick(lobby.code)
       werBinIchLobbies.delete(lobby.code)
     })
 

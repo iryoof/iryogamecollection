@@ -1,14 +1,17 @@
 ﻿import { useMemo, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { WavelengthAck, WavelengthGameState } from './types'
+import VoteKickPanel, { VoteKickButton } from '../../components/VoteKickPanel'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface GameProps {
   socket: Socket
   gameState: WavelengthGameState
   onError: (message: string) => void
+  voteKick: VoteKickApi
 }
 
-export default function Game({ socket, gameState, onError }: GameProps) {
+export default function Game({ socket, gameState, onError, voteKick }: GameProps) {
   const [selectedPlayerForQuestion, setSelectedPlayerForQuestion] = useState<string | null>(null)
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
@@ -93,7 +96,45 @@ export default function Game({ socket, gameState, onError }: GameProps) {
           )}
         </div>
 
+        <VoteKickPanel vote={voteKick.vote} selfPlayerId={gameState.myId} onVote={voteKick.castVote} />
+        {voteKick.notice && (
+          <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+        )}
+
         <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
+          <div className="surface-panel rounded-[1.5rem] p-5 space-y-3">
+            <p className="section-kicker">Am Tisch</p>
+            <div className="grid grid-cols-1 gap-2">
+              {gameState.players.map(player => (
+                <div
+                  key={player.id}
+                  className="surface-panel-strong rounded-[1.25rem] px-4 py-3 flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="truncate font-semibold text-zinc-100">
+                    {player.name}
+                    {player.id === gameState.seekerId && (
+                      <span className="status-chip status-chip-muted ml-2">Seeker</span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {player.isDisconnected && (
+                      <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-200">
+                        Getrennt
+                      </span>
+                    )}
+                    {player.id !== gameState.myId && (
+                      <VoteKickButton
+                        playerName={player.name}
+                        onStart={() => voteKick.startVoteKick(player.id)}
+                        disabled={!!voteKick.vote}
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="surface-panel rounded-[1.5rem] p-5 space-y-4 max-h-[26rem] overflow-y-auto">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-white">Fragen & Antworten</h2>

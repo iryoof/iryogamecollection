@@ -1,5 +1,7 @@
 ﻿import type { Socket } from 'socket.io-client'
 import type { WavelengthAck, WavelengthLobbyState } from './types'
+import VoteKickPanel, { VoteKickButton } from '../../components/VoteKickPanel'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface LobbyProps {
   socket: Socket
@@ -8,9 +10,10 @@ interface LobbyProps {
   error: string
   onError: (message: string) => void
   onLeave: () => void
+  voteKick: VoteKickApi
 }
 
-export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onLeave }: LobbyProps) {
+export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onLeave, voteKick }: LobbyProps) {
   const me = lobby.players.find(player => player.id === selfPlayerId)
   const isHost = !!me?.isHost
   const canStart = lobby.players.filter(player => !player.isDisconnected).length >= 2
@@ -63,6 +66,11 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onL
             </p>
           </div>
 
+          <VoteKickPanel vote={voteKick.vote} selfPlayerId={selfPlayerId} onVote={voteKick.castVote} />
+          {voteKick.notice && (
+            <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+          )}
+
           <div className="surface-panel rounded-[1.5rem] p-5 space-y-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
@@ -94,6 +102,13 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onL
                       )}
                       {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
+                      )}
+                      {player.id !== selfPlayerId && (
+                        <VoteKickButton
+                          playerName={player.name}
+                          onStart={() => voteKick.startVoteKick(player.id)}
+                          disabled={!!voteKick.vote}
+                        />
                       )}
                       {isHost && player.id !== selfPlayerId && (
                         <button
