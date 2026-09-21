@@ -535,6 +535,58 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
       }
     })
 
+    // Remove a specific player from the lobby (host only).
+    socket.on('wvl:lobby:kick', async (targetId: string, callback?: (response: WavelengthAck) => void) => {
+      try {
+        const playerId = socket.data.wavelengthPlayerId as string | undefined
+        if (!playerId) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+
+        const lobby = wavelengthGameManager.findLobbyByPlayerId(playerId)
+        if (!lobby) {
+          callback?.({ error: 'Lobby nicht gefunden.' })
+          return
+        }
+        if (lobby.getHostId() !== playerId) {
+          callback?.({ error: 'Nur der Host kann Spieler entfernen.' })
+          return
+        }
+        if (!targetId || targetId === playerId) {
+          callback?.({ error: 'Ungültiger Spieler.' })
+          return
+        }
+        if (!lobby.hasPlayer(targetId)) {
+          callback?.({ error: 'Spieler nicht in der Lobby.' })
+          return
+        }
+
+        const code = lobby.getCode()
+        cancelEviction(targetId)
+
+        // Take the target out of the lobby room before the roster broadcast, so
+        // a late state update cannot arrive after 'wvl:lobby:kicked' and put the
+        // kicked client back on the lobby screen. The per-player room stays
+        // joined until after the emit, otherwise the notice would go nowhere.
+        const targetSockets = await io.in(targetId).fetchSockets()
+        for (const targetSocket of targetSockets) {
+          targetSocket.leave(code)
+        }
+        io.to(targetId).emit('wvl:lobby:kicked', 'Du wurdest aus der Lobby entfernt.')
+
+        wavelengthGameManager.removePlayer(targetId)
+        const remainingLobby = wavelengthGameManager.findLobbyByCode(code)
+        if (remainingLobby) {
+          handleRosterChange(io, remainingLobby)
+        }
+
+        callback?.({ ok: true })
+      } catch (error: any) {
+        callback?.({ error: error.message })
+      }
+    })
+
     socket.on('disconnect', () => {
       try {
         const playerId = socket.data.wavelengthPlayerId as string | undefined

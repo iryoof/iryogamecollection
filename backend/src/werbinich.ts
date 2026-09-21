@@ -538,6 +538,48 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
       removePlayerFromLobby(io, lobby, playerId)
     })
 
+    // Remove a specific player from the lobby (host only).
+    socket.on('lobby:kick', async (targetId: string, callback?: (payload: AckPayload) => void) => {
+      const playerId = socket.data.werBinIchPlayerId as string | undefined
+      if (!playerId) {
+        callback?.({ error: 'Lobby nicht gefunden.' })
+        return
+      }
+
+      const lobby = findLobbyByPlayerId(playerId)
+      if (!lobby) {
+        callback?.({ error: 'Lobby nicht gefunden.' })
+        return
+      }
+
+      const player = lobby.players.find(entry => entry.id === playerId)
+      if (!player?.isHost) {
+        callback?.({ error: 'Nur der Host kann Spieler entfernen.' })
+        return
+      }
+      if (!targetId || targetId === playerId) {
+        callback?.({ error: 'Ungültiger Spieler.' })
+        return
+      }
+      if (!lobby.players.some(entry => entry.id === targetId)) {
+        callback?.({ error: 'Spieler nicht in der Lobby.' })
+        return
+      }
+
+      // Take the target out of the lobby room before the roster broadcast, so a
+      // late lobby:update cannot arrive after 'lobby:kicked' and put the kicked
+      // client back on the lobby screen. The per-player room stays joined until
+      // after the emit, otherwise the notice would go nowhere.
+      const targetSockets = await io.in(targetId).fetchSockets()
+      for (const targetSocket of targetSockets) {
+        targetSocket.leave(lobby.code)
+      }
+      io.to(targetId).emit('lobby:kicked', 'Du wurdest aus der Lobby entfernt.')
+
+      removePlayerFromLobby(io, lobby, targetId)
+      callback?.({ ok: true })
+    })
+
     socket.on('lobby:close', () => {
       const playerId = socket.data.werBinIchPlayerId as string | undefined
       if (!playerId) return

@@ -108,6 +108,15 @@ export default function WerBinIchGame() {
       setReconnecting(false)
     }
 
+    const handleKicked = (reason: string) => {
+      setScreen('menu')
+      setLobbyData(null)
+      setGameData(null)
+      persistSession(null)
+      setError(reason || 'Du wurdest aus der Lobby entfernt.')
+      setReconnecting(false)
+    }
+
     const handleDisconnect = () => {
       setSocketConnected(false)
       setReconnecting(false)
@@ -139,12 +148,14 @@ export default function WerBinIchGame() {
     newSocket.on('lobby:update', handleLobbyUpdate)
     newSocket.on('game:state', handleGameState)
     newSocket.on('lobby:closed', handleLobbyClosed)
+    newSocket.on('lobby:kicked', handleKicked)
     newSocket.on('disconnect', handleDisconnect)
 
     return () => {
       newSocket.off('lobby:update', handleLobbyUpdate)
       newSocket.off('game:state', handleGameState)
       newSocket.off('lobby:closed', handleLobbyClosed)
+      newSocket.off('lobby:kicked', handleKicked)
       newSocket.off('disconnect', handleDisconnect)
       newSocket.disconnect()
     }

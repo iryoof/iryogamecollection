@@ -25,6 +25,15 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError }: L
     socket.emit('lobby:close')
   }
 
+  const handleKick = (targetId: string, name: string) => {
+    if (!window.confirm(`Möchtest du ${name} wirklich aus der Lobby entfernen?`)) return
+    socket.emit('lobby:kick', targetId, (response?: WerBinIchAck) => {
+      if (response?.error) {
+        onError(response.error)
+      }
+    })
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
       <div className="w-full max-w-3xl space-y-6">
@@ -76,6 +85,15 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError }: L
                       )}
                       {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
+                      )}
+                      {isHost && player.id !== selfPlayerId && (
+                        <button
+                          onClick={() => handleKick(player.id, player.name)}
+                          title="Spieler entfernen"
+                          className="action-danger px-3 py-2 text-[11px]"
+                        >
+                          Entfernen
+                        </button>
                       )}
                     </div>
                   </div>

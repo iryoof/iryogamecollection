@@ -130,6 +130,15 @@ export default function WavelengthGame() {
       setReconnecting(false)
     }
 
+    const handleKicked = (reason: string) => {
+      setScreen('menu')
+      setLobbyData(null)
+      setGameData(null)
+      persistSession(null)
+      setError(reason || 'Du wurdest aus der Lobby entfernt.')
+      setReconnecting(false)
+    }
+
     const handleDisconnect = () => {
       setSocketConnected(false)
       setReconnecting(false)
@@ -162,6 +171,7 @@ export default function WavelengthGame() {
     newSocket.on('wvl:game:state', handleGameState)
     newSocket.on('wvl:result:state', handleResultState)
     newSocket.on('wvl:lobby:closed', handleLobbyClosed)
+    newSocket.on('wvl:lobby:kicked', handleKicked)
     newSocket.on('disconnect', handleDisconnect)
 
     return () => {
@@ -170,6 +180,7 @@ export default function WavelengthGame() {
       newSocket.off('wvl:game:state', handleGameState)
       newSocket.off('wvl:result:state', handleResultState)
       newSocket.off('wvl:lobby:closed', handleLobbyClosed)
+      newSocket.off('wvl:lobby:kicked', handleKicked)
       newSocket.off('disconnect', handleDisconnect)
       newSocket.close()
     }

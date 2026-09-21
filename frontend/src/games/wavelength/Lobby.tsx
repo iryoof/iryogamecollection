@@ -31,6 +31,15 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onL
     })
   }
 
+  const handleKick = (targetId: string, name: string) => {
+    if (!window.confirm(`Möchtest du ${name} wirklich aus der Lobby entfernen?`)) return
+    socket.emit('wvl:lobby:kick', targetId, (response?: WavelengthAck) => {
+      if (response?.error) {
+        onError(response.error)
+      }
+    })
+  }
+
   const handleLeave = () => {
     socket.emit('wvl:lobby:leave', () => {
       onLeave()
@@ -85,6 +94,15 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onL
                       )}
                       {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
+                      )}
+                      {isHost && player.id !== selfPlayerId && (
+                        <button
+                          onClick={() => handleKick(player.id, player.name)}
+                          title="Spieler entfernen"
+                          className="action-danger px-3 py-2 text-[11px]"
+                        >
+                          Entfernen
+                        </button>
                       )}
                     </div>
                   </div>
