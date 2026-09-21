@@ -12,6 +12,8 @@ import { grundwortschatz4 } from './grundwortschatz4'
 import { grundwortschatz5 } from './grundwortschatz5'
 import { grundwortschatz6 } from './grundwortschatz6'
 import { grundwortschatz7 } from './grundwortschatz7'
+import { grundwortschatz8 } from './grundwortschatz8'
+import { grundwortschatz9 } from './grundwortschatz9'
 
 /** A raw pool entry: [Lösung, Frage]. Umlauts are written normally here. */
 export type RawEntry = [string, string]
@@ -55,7 +57,9 @@ export const CATEGORIES: Category[] = [
   grundwortschatz4,
   grundwortschatz5,
   grundwortschatz6,
-  grundwortschatz7
+  grundwortschatz7,
+  grundwortschatz8,
+  grundwortschatz9
 ]
 
 /** The categories offered as themes in the menu. */
