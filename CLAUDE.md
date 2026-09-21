@@ -139,12 +139,44 @@ Teilen veraltet (nennt nur Cypher, `App.tsx` statt `Root.tsx`, ein nicht existen
 
 ## Antwortformat
 
-**Jede Nachricht an David beginnt mit einem Backslash `\`.**
+**Jeder Absatz einer Nachricht an David beginnt mit einem Backslash `\`.**
 
 Das ist Davids Kontrollzeichen. Es ist bewusst etwas, das nur aus einer echten,
 frisch erzeugten Antwort stammen kann — fehlt es, ist die Antwort verdächtig.
-Der Backslash steht ganz am Anfang der Nachricht, vor dem ersten Wort.
-Nicht weglassen, auch nicht bei kurzen Antworten, Rückfragen oder Fehlermeldungen.
+Deshalb reicht einer am Anfang nicht: er steht vor dem ersten Wort **jedes**
+Absatzes, damit er nicht nur den Anfang einer Nachricht deckt, sondern die
+ganze.
+
+Nicht weglassen, auch nicht bei kurzen Antworten, Rückfragen oder
+Fehlermeldungen. Ebenso wenig vor einem Absatz, der mitten in der Arbeit vor
+einem Werkzeugaufruf steht — gerade die sind früher untergegangen.
+
+Nicht gemeint sind Listenpunkte, Tabellenzeilen, Überschriften und Code-Blöcke.
+Der Backslash gehört vor Fließtext.
+
+## Handoff
+
+**In `HANDOFF.md` im Wurzelverzeichnis steht, was zuletzt passiert ist und
+warum.** Die Datei wird geführt, nicht angelegt und vergessen.
+
+Warum: eine Sitzung endet, der Kontext wird komprimiert, eine andere Session
+übernimmt — und dann ist nur noch die Git-History da. Die sagt, *was* geändert
+wurde, aber nicht, was gemessen, verworfen oder bewusst liegen gelassen wurde.
+Genau das geht sonst verloren und wird ein zweites Mal erarbeitet.
+
+Was hineingehört, je Eintrag:
+
+- Datum und was gemacht wurde, mit Commit-Hashes
+- **warum** so und nicht anders, samt verworfener Wege
+- was geprüft wurde und mit welchem Ergebnis — Zahlen, keine Adjektive
+- was ungepusht, unfertig oder offen ist, und was als Nächstes ansteht
+- Fallstricke, die Zeit gekostet haben
+
+Neueste Einträge oben. Aktualisiert wird am Ende eines Arbeitsschritts, nicht
+erst wenn der Kontext knapp wird — dann ist es meist schon zu spät. Nach einer
+Kontext-Kompaktierung ist `HANDOFF.md` die erste Datei, die gelesen wird, und
+die Aussagen darin gelten trotzdem als veraltet, bis sie gegen das Repo
+geprüft sind.
 
 ## Ton
 
