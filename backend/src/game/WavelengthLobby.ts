@@ -152,7 +152,8 @@ export class WavelengthLobby {
     return !!this.players.get(playerId)?.isDisconnected
   }
 
-  markDisconnected(playerId: string, deadline: number): void {
+  // `deadline` of null means the seat is held indefinitely (running game).
+  markDisconnected(playerId: string, deadline: number | null): void {
     const player = this.players.get(playerId)
     if (!player) return
 

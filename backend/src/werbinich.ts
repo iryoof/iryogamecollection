@@ -16,7 +16,10 @@ interface WerBinIchPlayer {
   name: string
   isHost: boolean
   reconnectKey: string
+  // Null while connected, and also while disconnected during a running game —
+  // there the seat is held without a deadline. Use isDisconnected for the flag.
   reconnectDeadline: number | null
+  isDisconnected: boolean
 }
 
 interface WerBinIchWordEntry {
@@ -78,7 +81,8 @@ function createLobby(hostSocket: Socket, hostName: string): { lobby: WerBinIchLo
     name: hostName,
     isHost: true,
     reconnectKey: randomUUID(),
-    reconnectDeadline: null
+    reconnectDeadline: null,
+    isDisconnected: false
   }
 
   const lobby: WerBinIchLobby = {
@@ -139,7 +143,7 @@ function buildLobbyState(lobby: WerBinIchLobby) {
       id: player.id,
       name: player.name,
       isHost: player.isHost,
-      isDisconnected: !!player.reconnectDeadline,
+      isDisconnected: player.isDisconnected,
       reconnectDeadline: player.reconnectDeadline
     }))
   }
@@ -184,7 +188,7 @@ function buildGameState(lobby: WerBinIchLobby, player: WerBinIchPlayer) {
         name: otherPlayer.name,
         word: wordEntry ? wordEntry.word : null,
         solved: !!lobby.solved[otherPlayer.id],
-        isDisconnected: !!otherPlayer.reconnectDeadline,
+        isDisconnected: otherPlayer.isDisconnected,
         reconnectDeadline: otherPlayer.reconnectDeadline
       }
     })
@@ -210,7 +214,7 @@ function buildGameState(lobby: WerBinIchLobby, player: WerBinIchPlayer) {
       id: otherPlayer.id,
       name: otherPlayer.name,
       isHost: otherPlayer.isHost,
-      isDisconnected: !!otherPlayer.reconnectDeadline,
+      isDisconnected: otherPlayer.isDisconnected,
       reconnectDeadline: otherPlayer.reconnectDeadline
     }))
   }
@@ -277,10 +281,20 @@ function scheduleEviction(io: SocketIOServer, lobbyCode: string, playerId: strin
 
 function markPlayerDisconnected(io: SocketIOServer, lobby: WerBinIchLobby, playerId: string) {
   const player = lobby.players.find(entry => entry.id === playerId)
-  if (!player || player.reconnectDeadline) return
+  if (!player || player.isDisconnected) return
 
-  player.reconnectDeadline = Date.now() + RECONNECT_GRACE_MS
-  scheduleEviction(io, lobby.code, playerId)
+  player.isDisconnected = true
+
+  // Once the game is running the seat is held without a deadline: the player
+  // holds a word somebody else wrote for them, so evicting them mid-round would
+  // throw that away. Only in the waiting room does the grace window apply.
+  if (lobby.state === 'waiting') {
+    player.reconnectDeadline = Date.now() + RECONNECT_GRACE_MS
+    scheduleEviction(io, lobby.code, playerId)
+  } else {
+    player.reconnectDeadline = null
+    cancelEviction(playerId)
+  }
 
   if (lobby.state === 'waiting') {
     broadcastLobby(io, lobby)
@@ -292,6 +306,7 @@ function markPlayerDisconnected(io: SocketIOServer, lobby: WerBinIchLobby, playe
 
 function clearPlayerReconnectState(player: WerBinIchPlayer) {
   player.reconnectDeadline = null
+  player.isDisconnected = false
   cancelEviction(player.id)
 }
 
@@ -345,7 +360,8 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           name: name.trim(),
           isHost: false,
           reconnectKey: randomUUID(),
-          reconnectDeadline: null
+          reconnectDeadline: null,
+          isDisconnected: false
         }
 
         lobby.players.push(player)

@@ -3,7 +3,8 @@ import { GameManager } from './game/GameManager'
 import { Lobby } from './game/Lobby'
 
 // Window within which a disconnected player may reconnect before being
-// evicted. 60s per product spec.
+// evicted. Only applies while the lobby is still in the waiting room — during
+// a running game the seat is held indefinitely, see keepsSeatIndefinitely().
 const RECONNECT_GRACE_MS = 60_000
 
 // Map of playerId -> pending eviction timer. Stored at module scope so all
@@ -41,6 +42,17 @@ function scheduleEviction(
     console.log(`Evicted ${playerId} from ${code} after reconnect grace period`)
   }, RECONNECT_GRACE_MS)
   evictionTimers.set(playerId, timer)
+}
+
+/**
+ * While a game is running, a dropped player keeps their seat for as long as the
+ * game lasts: evicting them mid-match would destroy their sheet and leave the
+ * round stuck for everybody else. In the waiting room the grace window still
+ * applies, otherwise closed tabs would pile up as ghost players forever.
+ */
+function keepsSeatIndefinitely(lobby: Lobby): boolean {
+  const state = lobby.getState()
+  return state.gameStarted && !state.gameEnded
 }
 
 /**
@@ -404,9 +416,10 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
       }
     })
 
-    // Disconnect: start the reconnect grace window for the disconnecting
-    // player. If they do not reconnect within RECONNECT_GRACE_MS they are
-    // evicted (and host is transferred if needed).
+    // Disconnect: in the waiting room, start the reconnect grace window — if
+    // the player does not come back within RECONNECT_GRACE_MS they are evicted
+    // (and host is transferred if needed). During a running game no eviction is
+    // scheduled at all, so they can rejoin whenever they want.
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`)
       const playerId = socket.data.playerId
@@ -421,9 +434,13 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
       const room = io.sockets.adapter.rooms.get(playerId)
       if (room && room.size > 0) return
 
-      const deadline = lobby.markDisconnected(playerId, RECONNECT_GRACE_MS)
-      if (deadline === null) return
-      scheduleEviction(io, gameManager, lobby, playerId)
+      const keepSeat = keepsSeatIndefinitely(lobby)
+      if (!lobby.markDisconnected(playerId, keepSeat ? 0 : RECONNECT_GRACE_MS)) return
+      if (keepSeat) {
+        cancelEviction(playerId)
+      } else {
+        scheduleEviction(io, gameManager, lobby, playerId)
+      }
       io.to(lobby.getCode()).emit('state-update', lobby.getState())
     })
 

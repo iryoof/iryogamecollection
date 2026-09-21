@@ -18,8 +18,10 @@ export class Lobby {
   private archiveId: string = uuidv4()
   private archiveDate: string = new Date().toISOString()
   // Deadline (ms epoch) until which a disconnected player can still reconnect.
-  // Absent from the map = player is connected.
-  private disconnectDeadlines: Map<string, number> = new Map()
+  // Absent from the map = player is connected. A null value = disconnected
+  // with no deadline at all (running game, see io.ts) — the player keeps their
+  // seat until they come back, are kicked, or the process restarts.
+  private disconnectDeadlines: Map<string, number | null> = new Map()
   // Sheets belonging to players who were removed (kick/leave/eviction) DURING
   // an active game. These sheets contain text written by OTHER (still active)
   // players via the round-robin assignment, so we must keep them around so
@@ -130,11 +132,17 @@ export class Lobby {
     return candidate
   }
 
-  markDisconnected(playerId: string, graceMs: number): number | null {
-    if (!this.players.has(playerId)) return null
-    const deadline = Date.now() + graceMs
+  /**
+   * Mark a player as disconnected. `graceMs` of 0 (or less) means the seat is
+   * held indefinitely — used while a game is running so nobody is locked out
+   * of a match they are in the middle of. Returns false if the player is not
+   * part of this lobby.
+   */
+  markDisconnected(playerId: string, graceMs: number): boolean {
+    if (!this.players.has(playerId)) return false
+    const deadline = graceMs > 0 ? Date.now() + graceMs : null
     this.disconnectDeadlines.set(playerId, deadline)
-    return deadline
+    return true
   }
 
   markReconnected(playerId: string): void {
@@ -335,9 +343,13 @@ export class Lobby {
 
   getState() {
     const submittedPlayers = Array.from(this.submissionsByRound.get(this.currentRound) || [])
+    // Players held indefinitely (deadline null) are reported as disconnected
+    // but without an entry here, so the UI shows "Getrennt" without a countdown.
     const disconnectDeadlines: Record<string, number> = {}
     this.disconnectDeadlines.forEach((deadline, id) => {
-      disconnectDeadlines[id] = deadline
+      if (deadline !== null) {
+        disconnectDeadlines[id] = deadline
+      }
     })
     return {
       lobbyCode: this.code,

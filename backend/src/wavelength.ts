@@ -598,8 +598,15 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         const lobby = wavelengthGameManager.findLobbyByPlayerId(playerId)
         if (!lobby) return
 
-        lobby.markDisconnected(playerId, Date.now() + RECONNECT_GRACE_MS)
-        scheduleEviction(io, playerId)
+        // Outside the waiting room the seat is held without a deadline so a
+        // dropped player can rejoin the running game whenever they get back.
+        const keepSeat = lobby.getPhase() !== 'waiting'
+        lobby.markDisconnected(playerId, keepSeat ? null : Date.now() + RECONNECT_GRACE_MS)
+        if (keepSeat) {
+          cancelEviction(playerId)
+        } else {
+          scheduleEviction(io, playerId)
+        }
         broadcastCurrentState(io, lobby)
       } catch (error) {
         console.error('Wavelength disconnect error:', error)

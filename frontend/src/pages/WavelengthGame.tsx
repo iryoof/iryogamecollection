@@ -49,6 +49,10 @@ export default function WavelengthGame() {
   const [reconnecting, setReconnecting] = useState(false)
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState(0)
   const sessionRef = useRef<WavelengthSession | null>(initialSession)
+  // The socket handlers below are registered once, so they cannot read the
+  // `screen` state directly. This ref mirrors whether the lobby has left the
+  // waiting room, which decides if the reconnect window is limited or open.
+  const gameRunningRef = useRef(false)
 
   const persistSession = (nextSession: WavelengthSession | null) => {
     sessionRef.current = nextSession
@@ -88,6 +92,7 @@ export default function WavelengthGame() {
     const handleLobbyUpdate = (data: WavelengthLobbyState) => {
       setLobbyData(data)
       setGameData(null)
+      gameRunningRef.current = false
       syncSessionPlayer(data.players)
       setError('')
       setScreen('lobby')
@@ -97,6 +102,7 @@ export default function WavelengthGame() {
     const handleVotingStarted = (data: WavelengthLobbyState) => {
       setLobbyData(data)
       setGameData(null)
+      gameRunningRef.current = true
       syncSessionPlayer(data.players)
       setError('')
       setScreen('voting')
@@ -106,6 +112,7 @@ export default function WavelengthGame() {
     const handleGameState = (data: WavelengthGameState) => {
       setGameData(data)
       setLobbyData(null)
+      gameRunningRef.current = true
       syncSessionPlayer(data.players)
       setError('')
       setScreen('game')
@@ -115,6 +122,7 @@ export default function WavelengthGame() {
     const handleResultState = (data: WavelengthGameState) => {
       setGameData(data)
       setLobbyData(null)
+      gameRunningRef.current = true
       syncSessionPlayer(data.players)
       setError('')
       setScreen('result')
@@ -145,11 +153,16 @@ export default function WavelengthGame() {
 
       const activeSession = sessionRef.current
       if (activeSession) {
+        const keepSeat = gameRunningRef.current
         persistSession({
           ...activeSession,
-          reconnectDeadline: Date.now() + RECONNECT_GRACE_MS
+          reconnectDeadline: keepSeat ? null : Date.now() + RECONNECT_GRACE_MS
         })
-        setError('Verbindung zum Server verloren. Wir versuchen, deine Session wiederherzustellen.')
+        setError(
+          keepSeat
+            ? 'Verbindung zum Server verloren. Dein Platz bleibt frei, solange das Spiel läuft.'
+            : 'Verbindung zum Server verloren. Wir versuchen, deine Session wiederherzustellen.'
+        )
         return
       }
 
@@ -244,6 +257,11 @@ export default function WavelengthGame() {
           {session?.reconnectDeadline && reconnectSecondsLeft > 0 && (
             <p className="text-sm text-zinc-500">
               Reconnect-Fenster offen für noch {reconnectSecondsLeft} Sekunden.
+            </p>
+          )}
+          {session?.reconnectKey && !session.reconnectDeadline && (
+            <p className="text-sm text-zinc-500">
+              Dein Platz bleibt frei, solange das Spiel läuft.
             </p>
           )}
         </div>

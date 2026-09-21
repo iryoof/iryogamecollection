@@ -45,6 +45,10 @@ export default function WerBinIchGame() {
   const [error, setError] = useState('')
   const [reconnecting, setReconnecting] = useState(false)
   const sessionRef = useRef<WerBinIchSession | null>(initialSession)
+  // The socket handlers below are registered once, so they cannot read the
+  // `screen` state directly. This ref mirrors whether a game is already
+  // running, which decides if the reconnect window is limited or open-ended.
+  const gameRunningRef = useRef(false)
 
   const persistSession = (nextSession: WerBinIchSession | null) => {
     sessionRef.current = nextSession
@@ -70,6 +74,7 @@ export default function WerBinIchGame() {
 
     const handleLobbyUpdate = (data: WerBinIchLobbyState) => {
       setLobbyData(data)
+      gameRunningRef.current = false
       const activeSession = sessionRef.current
       const me = data.players.find(player => player.id === activeSession?.playerId)
       if (activeSession && me) {
@@ -86,6 +91,7 @@ export default function WerBinIchGame() {
 
     const handleGameState = (data: WerBinIchGameState) => {
       setGameData(data)
+      gameRunningRef.current = true
       const activeSession = sessionRef.current
       const me = data.players.find(player => player.id === activeSession?.playerId)
       if (activeSession && me) {
@@ -123,11 +129,16 @@ export default function WerBinIchGame() {
 
       const activeSession = sessionRef.current
       if (activeSession) {
+        const keepSeat = gameRunningRef.current
         persistSession({
           ...activeSession,
-          reconnectDeadline: Date.now() + RECONNECT_GRACE_MS
+          reconnectDeadline: keepSeat ? null : Date.now() + RECONNECT_GRACE_MS
         })
-        setError('Verbindung zum Server verloren. Du kannst dich 120 Sekunden lang wiederverbinden.')
+        setError(
+          keepSeat
+            ? 'Verbindung zum Server verloren. Dein Platz bleibt frei, solange das Spiel läuft — du kannst jederzeit zurückkommen.'
+            : 'Verbindung zum Server verloren. Du kannst dich 120 Sekunden lang wiederverbinden.'
+        )
         return
       }
 
