@@ -8,6 +8,95 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-21 (später) — Reconnect ohne Limit, Votekick, Nachjoinen
+
+### Gemacht
+
+`b35e55f` **HANDOFF.md ins Repo aufgenommen.** Die Datei lag nur lokal und war
+untracked — für andere Sessions damit unsichtbar, also genau das Gegenteil
+ihres Zwecks. Dazu die Backslash-Regel in CLAUDE.md auf jeden Absatz
+ausgeweitet.
+
+`4129211` **Reconnect ohne Zeitlimit, solange eine Partie läuft.** Vorher flog
+ein getrennter Spieler nach 60s (Cypher) bzw. 120s (Wer bin ich, Wavelength)
+raus — auch mitten im Spiel. Jetzt wird während einer laufenden Partie gar kein
+Eviction-Timer gestellt. Im Wartebereich bleibt das alte Fenster, sonst sammeln
+sich geschlossene Tabs als Geisterspieler an.
+
+`ea6733a` **Votekick mit einfacher Mehrheit** in allen drei Spielen. Jeder
+Verbundene darf starten, es braucht über 50 % der Verbundenen ohne den
+Betroffenen. Auszählung generisch in `backend/src/game/VoteKick.ts`.
+
+`4a6dafb` **Nachjoinen in laufende Partien** in allen drei Spielen, plus
+`scripts/check-votekick.mjs`.
+
+### Warum so
+
+**Reconnect: kein Limit nur im laufenden Spiel, nicht generell.** Unbegrenzt
+auch im Wartebereich wurde verworfen: es gibt kein TTL-Aufräumen für Lobbys
+(`GameManager` löscht nur leere), eine Warte-Lobby würde sich dauerhaft mit
+Karteileichen füllen. „Kein Limit" ist überall `deadline === null`. Zwei
+Stolperstellen: `Lobby.markDisconnected` gab vorher die Deadline zurück, null
+hätte dann zwei Bedeutungen gehabt (kein Limit / Spieler nicht in der Lobby) —
+gibt jetzt boolean. Und Wer bin ich hatte keinen eigenen Disconnect-Flag,
+sondern leitete ihn aus `!!reconnectDeadline` ab; das trägt mit null nicht mehr,
+deshalb ein explizites `isDisconnected` am Spieler.
+
+**Votekick-Schwelle: Verbundene ohne den Betroffenen.** Getrennte mitzuzählen
+wurde verworfen — zusammen mit dem offenen Reconnect-Fenster könnte ein
+Abwesender den Kick dauerhaft blockieren. Zwei Drittel wurde ebenfalls
+verworfen: ein Störer wäre in kleinen Runden nicht mehr wegzubekommen. Unter
+zwei Stimmberechtigten wird abgelehnt, sonst kickt einer allein. Die
+Stimmberechtigten werden bei **jeder** Stimme neu gelesen, damit ein Disconnect
+mitten in der Abstimmung die Schwelle verschiebt statt sie unerreichbar zu
+machen.
+
+**Nachjoinen: der „geeignete Punkt" ist pro Spiel ein anderer.**
+- Cypher: erst zum Rundenwechsel. Die Rotation weist Blätter über die Position
+  in `playerOrder` zu — ein Spieler mehr mitten in der Runde schiebt allen ein
+  anderes Blatt unter. Preis der gewählten Variante: sein Blatt bleibt kürzer,
+  und die Rotation deckt danach nicht mehr jedes Blatt von jedem ab. Bewusst
+  gegen „nur zuschauen bis zum nächsten Spiel" entschieden (David).
+- Wer bin ich: sofort dabei. `assignments` hält genau ein Ziel pro Autor,
+  deshalb wird der Neue in den Zyklus eingehängt statt eine zweite Aufgabe zu
+  erfinden. Neu ist `myWordPending` — das eigene Wort ist einem verborgen, der
+  Client kann aus dem Spielstand nicht ableiten, ob er noch darauf wartet.
+- Wavelength: `isWaitingForNextRound`, aus `getActivePlayers()` ausgeschlossen.
+  Ohne das blockiert der Neue den Seeker, weil `canSeekerGuess()` eine Antwort
+  von jedem aktiven Spieler verlangt.
+
+### Geprüft
+
+- `npm run type-check` (Frontend + Backend): läuft durch.
+- `npm run build`: läuft durch, Frontend-Bundle 560 kB / 175 kB gzip.
+- `npx tsx scripts/check-votekick.mjs`: 9 von 9 Prüfungen grün (Schwelle bei 4
+  und 2 Stimmberechtigten, Ablehnung bei 1, Nein-Mehrheit, Ziel stimmt nicht
+  mit, Starter zählt als Ja).
+
+**Nicht geprüft: nichts davon wurde mit echten Clients gespielt.** Ungetestet
+sind vor allem der Cypher-Rundenwechsel mit Nachzügler, die Zyklus-Einhängung
+bei Wer bin ich und das Zusammenspiel von Votekick und Disconnect.
+
+### Offen
+
+- Alles ungepusht (`ahead 4`), Backend auf Render nicht neu deployed. Die
+  Socket-Events sind neu — ein Frontend-Deploy ohne Backend-Deploy macht
+  Votekick und Nachjoinen wirkungslos.
+- Wavelength: Votekick-Panel fehlt im Voting- und Ergebnis-Bildschirm.
+- Cypher: ein Spieler auf der Bank kann weder abstimmen noch per Votekick
+  entfernt werden — er steht nicht in `getState().players`. Der Host-Kick
+  greift, weil `hasPlayer` die Bank mit abdeckt.
+- `reconnectionAttempts: 5` im Socket.IO-Client aller drei Spiele: nach ~25s
+  gibt der Client von selbst auf. Server-seitig bleibt der Platz zwar frei, man
+  muss aber neu laden. Bewusst nicht angefasst, wäre ein Einzeiler.
+- Gelöscht: `Cypher-push-uncommitted-backup-2026-06-12.patch`. War ein
+  Sicherungs-Diff vom 12.06. (unbegrenzter Reconnect + Host-Übergabe), nie
+  angewendet und nicht mehr anwendbar — zwei Zieldateien wurden in `b8ce13c`
+  umbenannt. Die Reconnect-Idee daraus ist in `4129211` umgesetzt, die
+  automatische Host-Übergabe bei Disconnect **nicht** (auf Davids Wunsch).
+
+---
+
 ## 2026-09-21 — Wortpool erweitert, Kick eingebaut, Musterproblem vermessen
 
 ### Gemacht
