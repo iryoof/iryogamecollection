@@ -6,6 +6,8 @@ export interface WavelengthPlayer {
   isHost: boolean
   isDisconnected?: boolean
   reconnectDeadline?: number | null
+  /** Joined mid-round; sits this round out and is in from the next one. */
+  isWaitingForNextRound?: boolean
 }
 
 export interface WavelengthLobbyState {

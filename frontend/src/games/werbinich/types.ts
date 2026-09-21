@@ -29,6 +29,8 @@ export interface WerBinIchGameState {
   myWord: string | null
   myWordAuthor: string | null
   iSolved: boolean
+  /** True while nobody has written a word for me yet (late join). */
+  myWordPending?: boolean
   needsToWrite: boolean
   writeForPlayer: string | null
   writeForPlayerId: string | null

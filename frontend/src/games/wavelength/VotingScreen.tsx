@@ -14,7 +14,9 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
   const [loading, setLoading] = useState(false)
 
   const me = lobby.players.find(player => player.id === selfPlayerId)
-  const activePlayers = lobby.players.filter(player => !player.isDisconnected)
+  const activePlayers = lobby.players.filter(
+    player => !player.isDisconnected && !player.isWaitingForNextRound
+  )
   const hasSubmittedVote = !!selfPlayerId && lobby.votedPlayerIds.includes(selfPlayerId)
   const submittedVotes = lobby.votedPlayerIds.filter(playerId =>
     activePlayers.some(player => player.id === playerId)
@@ -48,6 +50,12 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
             Alle aktiven Spieler stimmen für eine Zahl von 1 bis 10 ab. Die Mehrheitszahl wird zum Ziel.
           </p>
         </div>
+
+        {me?.isWaitingForNextRound && (
+          <div className="alert-warning rounded-2xl px-4 py-3 text-sm">
+            Du bist ab der nächsten Runde dabei — diese Abstimmung läuft ohne dich.
+          </div>
+        )}
 
         {me?.isDisconnected && (
           <div className="alert-danger rounded-2xl px-4 py-3 text-sm">

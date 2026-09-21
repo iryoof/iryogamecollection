@@ -19,6 +19,9 @@ export default function Game({ socket, gameState, onError, voteKick }: GameProps
   const [loading, setLoading] = useState(false)
 
   const isSeeker = gameState.myId === gameState.seekerId
+  const isWaitingForNextRound = !!gameState.players.find(
+    player => player.id === gameState.myId
+  )?.isWaitingForNextRound
   const activeOtherPlayers = useMemo(
     () => gameState.players.filter(player => player.id !== gameState.seekerId && !player.isDisconnected),
     [gameState.players, gameState.seekerId]
@@ -96,6 +99,13 @@ export default function Game({ socket, gameState, onError, voteKick }: GameProps
           )}
         </div>
 
+        {isWaitingForNextRound && (
+          <div className="alert-warning rounded-2xl px-4 py-4 text-sm space-y-1">
+            <p className="font-semibold">Die Runde läuft schon.</p>
+            <p className="opacity-80">Du bist ab der nächsten Runde dabei — schau solange zu.</p>
+          </div>
+        )}
+
         <VoteKickPanel vote={voteKick.vote} selfPlayerId={gameState.myId} onVote={voteKick.castVote} />
         {voteKick.notice && (
           <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
@@ -121,6 +131,9 @@ export default function Game({ socket, gameState, onError, voteKick }: GameProps
                       <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-200">
                         Getrennt
                       </span>
+                    )}
+                    {player.isWaitingForNextRound && (
+                      <span className="status-chip status-chip-muted">Ab nächster Runde</span>
                     )}
                     {player.id !== gameState.myId && (
                       <VoteKickButton

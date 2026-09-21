@@ -24,6 +24,9 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
   const storedPlayerId = typeof window !== 'undefined' ? sessionStorage.getItem('cypher-player-id') : null
   const selfId = storedPlayerId || socket?.id || ''
   const isHost = !!gameState && gameState.hostId === selfId
+  const pendingPlayers = gameState?.pendingPlayers ?? []
+  // Joined while a game was already running: sits out until the next round.
+  const isWaitingForNextRound = pendingPlayers.some(player => player.id === selfId)
   const hasRequestedState = useRef(false)
 
   useEffect(() => {
@@ -166,6 +169,22 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
             </p>
           </div>
 
+          {isWaitingForNextRound && (
+            <div className="alert-warning rounded-2xl px-4 py-4 text-sm space-y-1">
+              <p className="font-semibold">Das Spiel läuft schon.</p>
+              <p className="opacity-80">
+                Du steigst ein, sobald die aktuelle Runde {gameState.currentRound} fertig ist — mit
+                einem eigenen leeren Blatt.
+              </p>
+            </div>
+          )}
+
+          {!isWaitingForNextRound && pendingPlayers.length > 0 && (
+            <div className="alert-surface rounded-2xl px-4 py-3 text-sm">
+              Steigt nächste Runde ein: {pendingPlayers.map(player => player.nickname).join(', ')}
+            </div>
+          )}
+
           <VoteKickPanel vote={voteKick} selfPlayerId={selfId} onVote={castVoteKickVote} />
           {voteKickNotice && (
             <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKickNotice}</div>
@@ -300,17 +319,21 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
                 {error}
               </div>
             )}
-            <button
-              onClick={handleStartGame}
-              disabled={!isHost || gameState.players.length < 3}
-              className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Spiel starten
-            </button>
-            {!isHost && (
-              <div className="text-xs text-zinc-600 text-center font-mono-ui uppercase tracking-[0.14em]">
-                Nur der Host kann das Spiel starten.
-              </div>
+            {!isWaitingForNextRound && (
+              <>
+                <button
+                  onClick={handleStartGame}
+                  disabled={!isHost || gameState.players.length < 3}
+                  className="action-primary w-full px-6 py-4 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Spiel starten
+                </button>
+                {!isHost && (
+                  <div className="text-xs text-zinc-600 text-center font-mono-ui uppercase tracking-[0.14em]">
+                    Nur der Host kann das Spiel starten.
+                  </div>
+                )}
+              </>
             )}
 
             {isHost ? (

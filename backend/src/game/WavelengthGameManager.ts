@@ -19,7 +19,12 @@ export class WavelengthGameManager {
     return lobby
   }
 
-  joinLobby(playerId: string, code: string, playerName: string): WavelengthLobby {
+  joinLobby(
+    playerId: string,
+    code: string,
+    playerName: string,
+    waitForNextRound = false
+  ): WavelengthLobby {
     const normalizedCode = code.trim().toUpperCase()
     const existingCode = this.playerLobbies.get(playerId)
     if (existingCode && existingCode !== normalizedCode) {
@@ -35,7 +40,7 @@ export class WavelengthGameManager {
       throw new Error('Name already taken')
     }
 
-    lobby.addPlayer(playerId, playerName)
+    lobby.addPlayer(playerId, playerName, waitForNextRound)
     this.playerLobbies.set(playerId, normalizedCode)
 
     console.log(`Player ${playerName} joined Wavelength lobby ${normalizedCode}`)

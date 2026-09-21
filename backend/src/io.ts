@@ -249,6 +249,9 @@ export function setupSocketHandlers(io: SocketIOServer, gameManager: GameManager
         const playerId = socket.data.playerId || socket.id
         const lobby = gameManager.findLobbyByPlayerId(playerId)
         if (!lobby) throw new Error('Lobby not found')
+        if (lobby.isPending(playerId)) {
+          throw new Error('Du steigst erst in der nächsten Runde ein')
+        }
 
         lobby.submitText(playerId, text)
         io.to(lobby.getCode()).emit('state-update', lobby.getState())

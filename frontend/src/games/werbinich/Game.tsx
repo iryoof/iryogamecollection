@@ -20,6 +20,9 @@ export default function Game({ socket, game, myName, selfPlayerId, voteKick }: G
   const [showSolvedModal, setShowSolvedModal] = useState(false)
   const [error, setError] = useState('')
 
+  // A latecomer cannot play until somebody has written a word for them.
+  const myWaitingForWord = game.state === 'playing' && !!game.myWordPending
+
   const targetPlayer = useMemo(
     () => game.others.find(player => player.id === newWordTarget) || null,
     [game.others, newWordTarget]
@@ -147,6 +150,35 @@ export default function Game({ socket, game, myName, selfPlayerId, voteKick }: G
         {error && (
           <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
             {error}
+          </div>
+        )}
+
+        {game.needsToWrite && (
+          <div className="alert-warning rounded-2xl px-4 py-4 space-y-3 text-sm">
+            <p className="font-semibold">
+              {game.writeForPlayer} ist neu dazugekommen und braucht einen Zettel von dir.
+            </p>
+            <form onSubmit={handleSubmitWord} className="flex flex-col gap-3 sm:flex-row">
+              <input
+                type="text"
+                placeholder="Figur oder Person eingeben..."
+                value={word}
+                onChange={event => setWord(event.target.value)}
+                maxLength={40}
+                required
+                className="flex-1 rounded-2xl px-4 py-3 text-base placeholder:text-zinc-600"
+              />
+              <button type="submit" className="action-primary px-6 py-3 text-sm">
+                Abschicken
+              </button>
+            </form>
+          </div>
+        )}
+
+        {myWaitingForWord && (
+          <div className="alert-surface rounded-2xl px-4 py-3 text-sm">
+            Du bist mitten im Spiel dazugekommen. Sobald jemand einen Zettel für dich
+            geschrieben hat, kannst du mitraten.
           </div>
         )}
 

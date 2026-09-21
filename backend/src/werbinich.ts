@@ -188,6 +188,37 @@ function assignPlayers(lobby: WerBinIchLobby) {
   })
 }
 
+/**
+ * Give a player who joined a running game somebody to write their word. The
+ * assignment map holds exactly one target per author, so the newcomer is slotted
+ * into the existing cycle instead of a second task being invented.
+ */
+function assignWordAuthorForLatecomer(lobby: WerBinIchLobby, newcomerId: string) {
+  const others = lobby.players.filter(player => player.id !== newcomerId && !player.isDisconnected)
+  if (others.length === 0) return
+
+  // Best case: somebody whose own task is already done. Overwriting their
+  // assignment costs nothing because the word they wrote is already stored.
+  const finished = others.find(player => {
+    const target = lobby.assignments[player.id]
+    return !target || !!lobby.words[target]
+  })
+  if (finished) {
+    lobby.assignments[finished.id] = newcomerId
+    return
+  }
+
+  // Otherwise splice into the cycle: A now writes for the newcomer, and the
+  // newcomer takes over A's old target. Neither word is lost, both are still
+  // owed.
+  const author = others[Math.floor(Math.random() * others.length)]
+  const oldTarget = lobby.assignments[author.id]
+  lobby.assignments[author.id] = newcomerId
+  if (oldTarget) {
+    lobby.assignments[newcomerId] = oldTarget
+  }
+}
+
 function buildGameState(lobby: WerBinIchLobby, player: WerBinIchPlayer) {
   const others = lobby.players
     .filter(otherPlayer => otherPlayer.id !== player.id)
@@ -213,7 +244,11 @@ function buildGameState(lobby: WerBinIchLobby, player: WerBinIchPlayer) {
     myWord: lobby.solved[player.id] && solvedInfo ? solvedInfo.word : null,
     myWordAuthor: lobby.solved[player.id] && solvedInfo ? solvedInfo.authorName : null,
     iSolved: !!lobby.solved[player.id],
-    needsToWrite: lobby.state === 'writing' && !targetWordExists,
+    // True for a latecomer until somebody has written a word for them.
+    myWordPending: !lobby.words[player.id],
+    // Also true while the game runs: a latecomer needs a word written for them
+    // and whoever got that task must be prompted for it.
+    needsToWrite: lobby.state !== 'waiting' && !targetWordExists,
     writeForPlayer: myAssignmentTarget
       ? lobby.players.find(otherPlayer => otherPlayer.id === myAssignmentTarget)?.name || null
       : null,
@@ -412,10 +447,6 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           callback?.({ error: 'Lobby nicht gefunden.' })
           return
         }
-        if (lobby.state !== 'waiting') {
-          callback?.({ error: 'Das Spiel hat bereits begonnen.' })
-          return
-        }
         if (lobby.players.some(player => player.name.toLowerCase() === name.trim().toLowerCase())) {
           callback?.({ error: 'Dieser Name ist bereits vergeben.' })
           return
@@ -432,7 +463,15 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
 
         lobby.players.push(player)
         bindSocketToPlayer(socket, lobby, player)
-        broadcastLobby(io, lobby)
+
+        if (lobby.state === 'waiting') {
+          broadcastLobby(io, lobby)
+        } else {
+          // Joining a running game: somebody gets the job of writing a word for
+          // the newcomer, and everyone moves to the game view.
+          assignWordAuthorForLatecomer(lobby, player.id)
+          broadcastGameState(io, lobby)
+        }
         callback?.({ code: lobby.code, session: buildSession(lobby, player) })
       }
     )
@@ -538,7 +577,7 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
         lobby.words[targetId] = { word, authorId: playerId }
         callback?.({ ok: true })
 
-        if (checkAllWordsWritten(lobby)) {
+        if (lobby.state === 'writing' && checkAllWordsWritten(lobby)) {
           lobby.state = 'playing'
         }
         broadcastGameState(io, lobby)

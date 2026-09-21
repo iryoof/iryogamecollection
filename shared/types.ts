@@ -31,6 +31,9 @@ export interface GameState {
   // player will be evicted automatically. Used by the UI to render a
   // countdown.
   disconnectDeadlines: Record<string, number>;
+  // Players who joined while the game was already running. They are not part
+  // of the roster yet and join in at the next round.
+  pendingPlayers: Player[];
   settings: GameSettings;
 }
 

@@ -100,6 +100,9 @@ export default function Lobby({ socket, lobby, selfPlayerId, error, onError, onL
                       {player.isDisconnected && (
                         <span className="status-chip border-yellow-400/30 bg-yellow-400/10 text-yellow-200">Getrennt</span>
                       )}
+                      {player.isWaitingForNextRound && (
+                        <span className="status-chip status-chip-muted">Ab nächster Runde</span>
+                      )}
                       {player.id === selfPlayerId && (
                         <span className="status-chip status-chip-muted">Du</span>
                       )}

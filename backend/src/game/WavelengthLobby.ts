@@ -7,6 +7,9 @@ export interface WavelengthPlayer {
   reconnectKey: string
   isDisconnected?: boolean
   reconnectDeadline?: number | null
+  // Joined while a round was already running. Sits out that round and is let
+  // in when the next one starts.
+  isWaitingForNextRound?: boolean
 }
 
 export interface QuestionAndAnswer {
@@ -76,7 +79,19 @@ export class WavelengthLobby {
   }
 
   getActivePlayers(): WavelengthPlayer[] {
-    return this.getPlayers().filter(player => !player.isDisconnected)
+    return this.getPlayers().filter(
+      player => !player.isDisconnected && !player.isWaitingForNextRound
+    )
+  }
+
+  /**
+   * Let everyone who joined mid-round into the next one. Called wherever a
+   * fresh round begins, never in the middle of one.
+   */
+  admitWaitingPlayers(): void {
+    this.players.forEach(player => {
+      player.isWaitingForNextRound = false
+    })
   }
 
   getState(): {
@@ -105,7 +120,7 @@ export class WavelengthLobby {
     return this.getPlayers().find(player => player.reconnectKey === reconnectKey) || null
   }
 
-  addPlayer(playerId: string, playerName: string): WavelengthPlayer {
+  addPlayer(playerId: string, playerName: string, waitForNextRound = false): WavelengthPlayer {
     const existing = this.players.get(playerId)
     if (existing) {
       return existing
@@ -117,7 +132,8 @@ export class WavelengthLobby {
       isHost: false,
       reconnectKey: this.generateReconnectKey(),
       isDisconnected: false,
-      reconnectDeadline: null
+      reconnectDeadline: null,
+      isWaitingForNextRound: waitForNextRound
     }
 
     this.players.set(playerId, player)
@@ -175,6 +191,8 @@ export class WavelengthLobby {
   }
 
   startVoting(): void {
+    // Latecomers count towards the minimum because the new round includes them.
+    this.admitWaitingPlayers()
     if (this.getActivePlayers().length < 2) {
       throw new Error('Mindestens 2 verbundene Spieler sind erforderlich.')
     }
@@ -187,7 +205,7 @@ export class WavelengthLobby {
     if (!Number.isInteger(number) || number < 1 || number > 10) return false
 
     const player = this.players.get(playerId)
-    if (!player || player.isDisconnected) return false
+    if (!player || player.isDisconnected || player.isWaitingForNextRound) return false
 
     this.votes.set(playerId, number)
     return true
@@ -344,6 +362,7 @@ export class WavelengthLobby {
   }
 
   resetForNewRound(): void {
+    this.admitWaitingPlayers()
     this.resetRoundState('waiting')
   }
 

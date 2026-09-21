@@ -28,6 +28,12 @@ export class Lobby {
   // those contributions appear in the final archive. Keyed by the original
   // owner's playerId so we can preserve their nickname in the archive.
   private orphanedSheets: Map<string, { nickname: string; sheet: TextEntry[] }> = new Map()
+  // Players who joined while a game was already running. They sit out the
+  // current round and are folded into the roster at the next round boundary,
+  // because the round robin assigns sheets by position in playerOrder — adding
+  // someone mid-round would hand everyone a different sheet than the one they
+  // are writing on.
+  private pendingPlayers: Map<string, Player> = new Map()
 
   constructor(code: string, hostId: string, hostNickname: string, settings: GameSettings) {
     this.code = code
@@ -55,15 +61,18 @@ export class Lobby {
   }
 
   addPlayer(playerId: string, nickname: string): void {
-    if (this.gameStarted) {
-      throw new Error('Game already started')
-    }
-
     const player: Player = {
       id: playerId,
       nickname,
       isReady: false
     }
+
+    // Joining a running game puts the player on the bench until the next round.
+    if (this.gameStarted && !this.gameEnded) {
+      this.pendingPlayers.set(playerId, player)
+      return
+    }
+
     this.players.set(playerId, player)
     this.playerOrder.push(playerId)
     if (!this.sheets.has(playerId)) {
@@ -72,11 +81,36 @@ export class Lobby {
   }
 
   hasPlayer(playerId: string): boolean {
-    return this.players.has(playerId)
+    return this.players.has(playerId) || this.pendingPlayers.has(playerId)
+  }
+
+  /** True while the player is waiting for the next round to be let in. */
+  isPending(playerId: string): boolean {
+    return this.pendingPlayers.has(playerId)
+  }
+
+  getPendingPlayers(): Player[] {
+    return Array.from(this.pendingPlayers.values())
+  }
+
+  /**
+   * Move everyone off the bench into the roster. Called at a round boundary and
+   * when a new game starts, never in the middle of a round.
+   */
+  private promotePendingPlayers(): void {
+    this.pendingPlayers.forEach((player, playerId) => {
+      if (this.players.has(playerId)) return
+      this.players.set(playerId, player)
+      this.playerOrder.push(playerId)
+      if (!this.sheets.has(playerId)) {
+        this.sheets.set(playerId, [])
+      }
+    })
+    this.pendingPlayers.clear()
   }
 
   updatePlayerNickname(playerId: string, nickname: string): void {
-    const player = this.players.get(playerId)
+    const player = this.players.get(playerId) || this.pendingPlayers.get(playerId)
     if (player) {
       player.nickname = nickname
     }
@@ -96,6 +130,7 @@ export class Lobby {
       })
     }
     this.players.delete(playerId)
+    this.pendingPlayers.delete(playerId)
     this.playerOrder = this.playerOrder.filter(id => id !== playerId)
     this.sheets.delete(playerId)
     this.disconnectDeadlines.delete(playerId)
@@ -139,7 +174,7 @@ export class Lobby {
    * part of this lobby.
    */
   markDisconnected(playerId: string, graceMs: number): boolean {
-    if (!this.players.has(playerId)) return false
+    if (!this.hasPlayer(playerId)) return false
     const deadline = graceMs > 0 ? Date.now() + graceMs : null
     this.disconnectDeadlines.set(playerId, deadline)
     return true
@@ -179,6 +214,9 @@ export class Lobby {
     if (this.gameStarted && !this.gameEnded) {
       throw new Error('Game already started')
     }
+    // Anyone who joined while the previous game was running plays this one
+    // from the start, so they count towards the minimum.
+    this.promotePendingPlayers()
     if (this.players.size < 3) {
       throw new Error('Need at least 3 players')
     }
@@ -253,6 +291,10 @@ export class Lobby {
     if (!this.haveAllPlayersSubmitted()) {
       throw new Error('Round is not complete')
     }
+    // A round boundary is the only safe moment to let latecomers in: nobody is
+    // mid-sheet, so the changed rotation cannot pull a sheet out from under
+    // anyone. Their own sheet starts empty and stays shorter than the rest.
+    this.promotePendingPlayers()
     this.currentRound++
     this.submissionsByRound.set(this.currentRound, new Set())
   }
@@ -365,6 +407,7 @@ export class Lobby {
       votedPlayerIds: Array.from(this.votes.keys()),
       disconnectedPlayerIds: Array.from(this.disconnectDeadlines.keys()),
       disconnectDeadlines,
+      pendingPlayers: this.getPendingPlayers(),
       settings: this.settings
     }
   }
@@ -390,7 +433,7 @@ export class Lobby {
   }
 
   isEmpty(): boolean {
-    return this.players.size === 0
+    return this.players.size === 0 && this.pendingPlayers.size === 0
   }
 
   startVoting(): string[] {

@@ -297,13 +297,17 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
           callback?.({ error: 'Lobby nicht gefunden.' })
           return
         }
-        if (existingLobby.getPhase() !== 'waiting') {
-          callback?.({ error: 'Das Spiel hat bereits begonnen.' })
-          return
-        }
+        // Joining a running lobby is allowed; the newcomer sits out the current
+        // round and is let in when the next one starts.
+        const waitForNextRound = existingLobby.getPhase() !== 'waiting'
 
         const playerId = randomUUID()
-        const lobby = wavelengthGameManager.joinLobby(playerId, normalizedCode, trimmedName)
+        const lobby = wavelengthGameManager.joinLobby(
+          playerId,
+          normalizedCode,
+          trimmedName,
+          waitForNextRound
+        )
         const player = lobby.getPlayer(playerId)
         if (!player) {
           callback?.({ error: 'Spieler konnte nicht beitreten.' })
@@ -313,7 +317,7 @@ export function setupWavelengthSocketHandlers(io: SocketIOServer) {
         cancelEviction(player.id)
         attachSocketToPlayer(socket, lobby, player)
         callback?.({ ok: true, code: lobby.getCode(), session: buildSession(lobby, player) })
-        broadcastLobbyState(io, lobby)
+        broadcastCurrentState(io, lobby)
       } catch (error: any) {
         callback?.({ error: error.message === 'Name already taken' ? 'Dieser Name ist bereits vergeben.' : error.message })
       }

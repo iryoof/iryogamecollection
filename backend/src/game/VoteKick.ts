@@ -13,9 +13,9 @@
  * and a callback for broadcasting / carrying out the kick.
  */
 
-import { VoteKickOutcome, VoteKickState } from 'shared/types'
+import type { VoteKickOutcome, VoteKickState } from 'shared/types'
 
-export { VoteKickOutcome, VoteKickState }
+export type { VoteKickOutcome, VoteKickState }
 
 // How long a vote stays open before it lapses.
 export const VOTE_KICK_TTL_MS = 60_000
@@ -164,15 +164,9 @@ export function startVoteKick(options: StartVoteKickOptions): VoteKickState {
   }
   polls.set(lobbyCode, poll)
 
+  // The initiator's own yes can never be a majority on its own: with at least
+  // two eligible voters the threshold is at least two.
   const state = buildState(poll, eligibleIds)
-  // A two-player vote is already decided by the initiator's own yes.
-  if (state.approvedBy.length >= state.needed) {
-    clearTimeout(poll.timer)
-    polls.delete(lobbyCode)
-    poll.onChange(null, 'passed')
-    return state
-  }
-
   poll.onChange(state, null)
   return state
 }
