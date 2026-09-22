@@ -47,17 +47,42 @@ Broadcast, nicht in der Schwelle selbst.
 ### Fallstricke
 
 - **Cypher verlangt in Runde 1 zwei Zeilen pro Abgabe**, ab Runde 2 genau eine
-  (`Lobby.submitText`). Eine einzeilige Abgabe in Runde 1 wird kommentarlos als
-  Fehler abgewiesen, die Runde wird nie fertig. Hat im Simulationsskript Zeit
-  gekostet, ist dort jetzt kommentiert.
+  (`Lobby.submitText`). Hat im Simulationsskript Zeit gekostet — und war nicht
+  nur ein Test-Problem, siehe `7869d37` unten.
 - Render Free-Tier schläft ein: die erste Socket-Verbindung läuft in den
   Connect-Timeout, weil der Kaltstart länger dauert. Erst per `curl /health`
   wecken, dann verbinden.
 
+### Nachgezogen: `7869d37` — abgelehnte Abgaben waren unsichtbar
+
+Der Fallstrick oben war kein reines Testproblem. Wird eine Cypher-Abgabe
+abgelehnt, schickt der Server zwar einen Fehler, aber `GameScreen` hat `error`
+nie gerendert, und `handleTextSubmit` setzt optimistisch `hasSubmitted` und
+schaltet auf „Warte auf die anderen...". Ergebnis: der Spieler steht dauerhaft
+auf Warten, obwohl nichts gezählt wurde, und die Runde wird für **alle** nie
+fertig. Das traf jeden Ablehnungsgrund in `submitText`, auch das neue „Du
+steigst erst in der nächsten Runde ein" für Nachzügler.
+
+Behoben: Spielregel-Meldungen in `Lobby.ts` deutsch und handlungsfähig,
+`GameScreen` zeigt den Fehler in der Schreibphase, und ein Effekt nimmt das
+optimistische `hasSubmitted` zurück, sobald ein Fehler eintrifft und der Server
+uns nicht als abgegeben führt.
+
+`stress-test.mjs` prüfte vier dieser Texte auf Englisch und wurde nachgezogen —
+wer weitere Meldungen übersetzt, muss dort mitziehen.
+
+Bewusst nicht angefasst: `'Game already started'`, `'Need at least 3 players'`,
+`'Player not in lobby'` und die `'Lobby not found'`-Meldungen in `io.ts`. Die
+erste Gruppe erreicht die Schreibphase nicht, und auf `lobby not found` prüft
+`useGameSocket` per String-Vergleich — das wäre eine eigene Änderung.
+
+Danach: `sim-neue-features.mjs` 42/42, `stress-test.mjs` 6/6,
+`check-votekick.mjs` 11/11, type-check und build grün.
+
 ### Offen
 
-- `0b50cad` ist committet, aber **nicht gepusht** — das Backend auf Render läuft
-  noch mit der hängenden Variante.
+- `0b50cad` und `7869d37` sind committet, aber **nicht gepusht** — das Backend
+  auf Render läuft noch mit der hängenden Abstimmung und den stummen Abgaben.
 - Die Punkte aus dem Eintrag vom 2026-09-21 gelten unverändert weiter
   (Wavelength-Panel in Voting/Ergebnis, Bank-Spieler ohne Stimmrecht,
   `reconnectionAttempts: 5`).
