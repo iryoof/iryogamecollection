@@ -54,10 +54,14 @@ function run(eligible, votes) {
 check('5 Spieler: Starter + 2 Ja kickt', run(['a', 'b', 'c', 'd'], [['b', true], ['c', true]]), ['passed'])
 check('5 Spieler: Starter + 1 Ja reicht nicht', run(['a', 'b', 'c', 'd'], [['b', true]]), [])
 check('5 Spieler: 3 Nein lehnen ab', run(['a', 'b', 'c', 'd'], [['b', false], ['c', false], ['d', false]]), ['failed'])
+// Bei 4 Berechtigten und 3 nötigen Ja machen schon 2 Nein den Sieg unmöglich.
+check('5 Spieler: 2 Nein beenden sofort', run(['a', 'b', 'c', 'd'], [['b', false], ['c', false]]), ['failed'])
 
 // 3 Spieler, Ziel raus -> 2 stimmberechtigt, 2 Ja nötig.
 check('3 Spieler: beide Ja kickt', run(['a', 'b'], [['b', true]]), ['passed'])
 check('3 Spieler: Starter allein reicht nicht', run(['a', 'b'], []), [])
+// Bei 2 Berechtigten müssen beide zustimmen, ein Nein entscheidet sofort.
+check('3 Spieler: ein Nein beendet sofort', run(['a', 'b'], [['b', false]]), ['failed'])
 
 // 2 Spieler, Ziel raus -> 1 stimmberechtigt: eine Stimme darf nicht reichen.
 check('2 Spieler: Abstimmung verweigert', run(['a'], []), ['refused:Dafür sind zu wenige Spieler verbunden.'])

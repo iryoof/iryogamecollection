@@ -108,7 +108,12 @@ function evaluate(lobbyCode: string): void {
     return
   }
 
-  if (state.rejectedBy.length >= state.needed) {
+  // Fail as soon as the yes side can no longer reach the threshold, not only
+  // once the no votes are a majority themselves. With two eligible voters both
+  // have to agree, so a single no already decides it — waiting for a "no
+  // majority" would leave that vote hanging until it expires.
+  const stillPossibleApprovals = eligibleIds.length - state.rejectedBy.length
+  if (stillPossibleApprovals < state.needed) {
     clearTimeout(poll.timer)
     polls.delete(lobbyCode)
     poll.onChange(null, 'failed')
