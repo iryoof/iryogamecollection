@@ -8,6 +8,86 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-22 (abends) — Wortpool aus Wikidata, Spielseiten nachgeladen
+
+### Gemacht
+
+`1d5b9b8` **Schwedenrätsel-Pool von 3.532 auf 5.967 Lösungen**, Quelle Wikidata
+über `scripts/harvest-wikidata.mjs`. Dazu werden die fünf Spielseiten per
+`React.lazy` nachgeladen.
+
+### Warum Wikidata und nicht Wiktionary
+
+Labels und Kurzbeschreibungen stehen bei Wikidata unter **CC0**, also
+gemeinfrei — von den grossen freien Quellen die einzige ohne Namensnennungs-
+und Share-Alike-Pflicht. Wiktionary ist deutlich grösser und deckt auch
+Alltagswörter ab, steht aber unter CC BY-SA: die Seite bräuchte dann einen
+Lizenzhinweis, und der ganze Wortbestand fiele unter Share-Alike. David hat sich
+bewusst für CC0 entschieden.
+
+Reine Wortlisten (igerman98 & Co.) scheiden aus, weil ein Schwedenrätsel zu
+jedem Wort eine **Frage** braucht. Wikidatas Kurzbeschreibung ist von Haus aus
+kurz genug ("Stadt in Italien") und pro Eintrag verschieden.
+
+### Was beim Bauen schiefging — bitte lesen, bevor jemand den Ernter anfasst
+
+1. **Der Ernter war nicht wiederholbar.** Er entdoppelte gegen `buildPool()`,
+   also auch gegen den eigenen Ertrag. Der zweite Lauf sah fast nichts mehr als
+   neu und überschrieb 15 Dateien mit Resten. Behoben durch `source: 'wikidata'`
+   an der Kategorie, das `existingAnswers()` ausblendet. **Wer weitere erzeugte
+   Kategorien hinzufügt, muss dieses Feld setzen.**
+2. **Ein Filter griff stillschweigend nie.** Statt der Wortgrenze `` stand ein
+   **Backspace-Steuerzeichen** (``) in der Datei — beim Einfügen über ein
+   Heredoc war die Maskierung verlorengegangen. Ausgegeben sah die Regex korrekt
+   aus. Gefunden nur, weil das Ergebnis nachgezählt wurde. Lehre: bei
+   Backslash-Escapes in per Heredoc erzeugtem Code das Ergebnis mit `repr()`
+   prüfen, nicht mit `cat`.
+3. **Mehr Wörter machten die Rätsel erst schlechter.** Geografie liefert so viel,
+   dass ein 11x11-Gitter zu zwei Dritteln aus „Fluss in …" bestand. Deshalb hat
+   jede ergiebige Abfrage ein `max`. Fallstrick dabei: beim Kappen bleiben die
+   **kurzen** Einträge — und genau die bevorzugt der Generator, das Kappen wirkte
+   anfangs also verstärkend statt dämpfend. Die Grenzen sind entsprechend eng.
+4. **Taxonomie ist als Rätselfrage wertlos.** „Art der Gattung Ourebia" kann
+   niemand lösen. Nach dem Filter bleiben von 1.000 geernteten Tier-Einträgen
+   **52** übrig. Die Tier-Abfragen sind damit fast nutzlos; der Ertrag kommt aus
+   Geografie, Vornamen, Elementen und Berufen.
+
+### Nicht enthalten
+
+- **Pflanzen**: die Abfrage über den Pflanzen-Taxonbaum läuft bei WDQS
+  reproduzierbar in den Timeout (HTTP 502), auch mit hoher Sitelink-Schwelle.
+- **Himmelskörper**: WDQS liefert abgeschnittenes JSON, und der Ertrag wären
+  18 Einträge gewesen, fast alles Katalognummern.
+- WDQS liefert unter Last generell gelegentlich abgeschnittenes JSON. Deshalb
+  fünf Versuche mit 15s-Backoff und die Option `--only <ids>`, um eine einzelne
+  Abfrage nachzuholen, ohne die übrigen Dateien neu zu schreiben. Städte und
+  Berge brauchten das mehrfach; kleineres `--limit` hilft.
+
+### Bundle
+
+Die Spielseiten hingen alle im Hauptbundle, das Portal trug also den ganzen
+Wortpool mit. Mit `React.lazy`: **560 kB (175 kB gzip) → 244 kB (78 kB gzip)**.
+Das Schwedenrätsel liegt in einem eigenen Stück von 271 kB (95 kB gzip).
+
+### Geprüft
+
+- `check-woerter.mjs`: 6.850 Einträge, 5.967 im Pool, 3.766 kurze nutzbare,
+  weiterhin 17 zu lange Fragen (alle aus dem Altbestand).
+- `check-schwedenraetsel.mjs`: 180/180 Gitter, keine Frage ohne Wort. **Läuft
+  jetzt in Sekunden statt ein bis zwei Minuten** — mit mehr kurzen Wörtern
+  springt der Generator kaum noch zurück. Die Angabe in CLAUDE.md ist veraltet.
+- `npm run type-check`, `npm run build`: grün.
+- Im Browser durchgespielt: Themenmenü weiterhin sechs Einträge, Rätsel wird
+  erzeugt, Mischung stimmt (7 Geografie-Fragen von 26).
+
+### Offen
+
+- Ein zweiter Anlauf für Alltagswörter und Verben fehlt — Wikidata ist dort
+  schwach. Das wäre der Punkt, an dem Wiktionary trotz CC BY-SA lohnen könnte.
+- Die Punkte aus den früheren Einträgen gelten weiter.
+
+---
+
 ## 2026-09-22 (später) — Wavelength-Panel nachgezogen, Nachzügler-Fehler gefunden
 
 ### Gemacht
