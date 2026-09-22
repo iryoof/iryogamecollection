@@ -8,6 +8,65 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-22 (später) — Wavelength-Panel nachgezogen, Nachzügler-Fehler gefunden
+
+### Gemacht
+
+`2a4f8ba` **Votekick-Panel im Wavelength-Voting und -Ergebnis**, dazu neu
+`games/wavelength/PlayerRoster.tsx`. Und ein Fehler behoben, den das Nachjoinen
+aus `4a6dafb` eingeschleppt hatte.
+
+### Warum so
+
+Die Spielerliste lag danach dreimal fast identisch im Code (Spiel, Voting,
+Ergebnis), deshalb als eigene Komponente statt dreimal kopiert. `Game.tsx`
+wurde mit umgestellt, sonst wäre die vierte Variante entstanden. Im Voting
+zeigt die Liste zusätzlich „Gewählt"/„Wählt noch" — dort gab es vorher
+überhaupt keine Namen.
+
+### Der Fund beim Durchspielen
+
+Im Browser fiel auf: der Seeker bekam einen **Nachzügler als Fragenziel**
+angeboten, und der Zähler „Fragen & Antworten" zählte ihn mit (0/2 statt 0/1).
+`WavelengthLobby.askQuestion` prüfte nur `isDisconnected`, nicht
+`isWaitingForNextRound`, und `activeOtherPlayers` in `Game.tsx` genauso. Eine
+Frage an jemanden, der die Runde aussitzt, zieht die Runde unnötig in die
+Länge. Beide Stellen prüfen das jetzt.
+
+**Das war im Socket-Test nicht sichtbar**, weil die Simulation den Seeker nur
+die richtigen Spieler fragen ließ. Die Simulation prüft es jetzt aktiv.
+
+### Geprüft
+
+- `scripts/sim-neue-features.mjs --schnell`: **49/49**. Neu: Abstimmung in den
+  Phasen „voting" und „result", abgewiesene Frage an einen Nachzügler.
+- `scripts/stress-test.mjs`: 6/6. `npm run type-check`, `npm run build`: grün.
+- **Im Browser mit drei Tabs durchgespielt** gegen ein lokales Backend: Panel
+  und Liste auf beiden neuen Bildschirmen, Zielsicht ohne Ja/Nein-Knöpfe,
+  Abbruch nach einem einzigen Nein bei zwei Stimmberechtigten, Nachzügler weder
+  als Fragenziel noch im Zähler, Seeker konnte trotzdem raten.
+
+### Fallstricke
+
+- **Wavelength speichert die Session in `localStorage`, nicht
+  `sessionStorage`.** Ein zweiter Tab übernimmt dadurch die Session des ersten
+  und landet als derselbe Spieler in der Lobby. Zum Testen mit mehreren Tabs
+  vorher `localStorage.removeItem('wavvelength:session')` ausführen und neu
+  laden. Cypher ist davon nicht betroffen, das nutzt `sessionStorage`.
+- Für den Browser-Test liegt eine `.claude/launch.json` für den Vite-Server im
+  Wurzelverzeichnis. `.claude/` ist gitignoriert, die Datei ist also lokal.
+
+### Offen
+
+- `2a4f8ba` ist **nicht gepusht**.
+- Ein Wavelength-Nachzügler ist **stimmberechtigt**, obwohl er die Runde
+  aussitzt — anders als die Cypher-Bank, die gar nicht im Roster steht. Bewusst
+  nicht geändert, wäre eine eigene Entscheidung.
+- Cypher-Bank weiterhin ohne Stimmrecht und nicht per Votekick entfernbar,
+  `reconnectionAttempts: 5` unverändert.
+
+---
+
 ## 2026-09-22 — Simuliert, dabei einen hängenden Votekick gefunden
 
 ### Gemacht
