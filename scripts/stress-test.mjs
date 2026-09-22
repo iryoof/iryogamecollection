@@ -324,11 +324,11 @@ async function scenarioBaseline(ctx) {
   await startGame(host, clients, 1)
 
   host.socket.emit('next-round')
-  await expectedErrorPromise(host, 'Round is not complete')
+  await expectedErrorPromise(host, 'Die Runde ist noch nicht fertig')
 
   await submitRound(clients, 1, index => `r1-a-${index}\nr1-b-${index}`)
   host.socket.emit('submit-text', 'duplicate\nsubmit')
-  await expectedErrorPromise(host, 'Text already submitted')
+  await expectedErrorPromise(host, 'schon abgegeben')
 
   await reconnectClient(clients[5], lobbyCode)
   await nextRound(host, clients, 2)
@@ -363,7 +363,7 @@ async function scenarioHeavyRounds(ctx) {
   }
 
   await startVoting(host, clients)
-  const duplicateVote = expectedErrorPromise(clients[0], 'Vote already submitted')
+  const duplicateVote = expectedErrorPromise(clients[0], 'schon abgestimmt')
   clients[0].socket.emit('submit-vote', 0)
   clients[0].socket.emit('submit-vote', 1)
   await duplicateVote
@@ -390,7 +390,7 @@ async function scenarioHostReconnect(ctx) {
 
   await reconnectClient(host, lobbyCode)
   host.socket.emit('submit-vote', 0)
-  await expectedErrorPromise(host, 'Voting not active')
+  await expectedErrorPromise(host, 'keine Abstimmung')
 
   await nextRound(host, clients, 2)
   await submitRound(clients, 2, index => `host-r2-${index}`)

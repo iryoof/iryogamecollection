@@ -20,7 +20,7 @@ type GamePhase = 'waiting' | 'writing' | 'round-complete' | 'voting' | 'voting-r
 
 export default function GameScreen({ socket, onNavigate, game }: GameScreenProps) {
   const {
-    gameState, submitText, submitVote, startGame, clearSession,
+    gameState, error, submitText, submitVote, startGame, clearSession,
     voteKick, startVoteKick, castVoteKickVote
   } = game
   const [phase, setPhase] = useState<GamePhase>('waiting')
@@ -30,6 +30,9 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
   const [voteResults, setVoteResults] = useState<number[]>([])
   const [hasVoted, setHasVoted] = useState(false)
   const hasRequestedState = useRef(false)
+  // Letzte bereits verarbeitete Fehlermeldung, damit der Effekt unten nicht bei
+  // jedem Render erneut zurückschaltet.
+  const handledError = useRef('')
   const storedPlayerId = typeof window !== 'undefined' ? sessionStorage.getItem('cypher-player-id') : null
   const playerId = storedPlayerId || socket?.id || ''
   const isHost = gameState?.hostId === playerId
@@ -141,6 +144,19 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
 
     setPhase(hasSubmittedCurrentRound ? 'waiting' : 'writing')
   }, [gameState, hasSubmittedCurrentRound, hasVotedCurrentRound])
+
+  // Die Abgabe wird optimistisch als "eingereicht" angezeigt. Lehnt der Server
+  // sie ab (zu wenig Zeilen, Runde vorbei, Nachzügler), bliebe der Spieler sonst
+  // dauerhaft auf "Warte auf die anderen" stehen, während die Runde für alle
+  // hängt. Deshalb zurück in die Schreibphase, sobald ein Fehler eintrifft und
+  // der Server uns nicht als abgegeben führt.
+  useEffect(() => {
+    if (!error || error === handledError.current) return
+    handledError.current = error
+    if (hasSubmittedCurrentRound) return
+    setHasSubmitted(false)
+    setPhase(currentPhase => (currentPhase === 'waiting' ? 'writing' : currentPhase))
+  }, [error, hasSubmittedCurrentRound])
 
   const handleTextSubmit = (text: string) => {
     if (!socket?.connected || hasSubmittedCurrentRound) return
@@ -320,6 +336,12 @@ export default function GameScreen({ socket, onNavigate, game }: GameScreenProps
                   placeholder="Schreibe eine Zeile..."
                   isDisabled={hasSubmitted}
                 />
+              )}
+
+              {error && !hasSubmitted && (
+                <div className="alert-danger rounded-2xl px-4 py-3 text-sm">
+                  {error}
+                </div>
               )}
 
               {hasSubmitted && (

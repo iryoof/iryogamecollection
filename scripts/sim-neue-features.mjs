@@ -223,10 +223,29 @@ async function szenarioNachjoinenCypher(serverUrl) {
   )
 
   // Runde 1 verlangt zwei Zeilen, spaetere Runden genau eine (Lobby.submitText).
+  // Eine einzeilige Abgabe muss deutlich abgelehnt werden und darf die Runde
+  // nicht blockieren - sonst wartet die halbe Lobby auf jemanden, der glaubt,
+  // er haette abgegeben.
+  const sloppy = clients[1]
+  const errorsBefore = sloppy.errors.length
+  sloppy.socket.emit('submit-text', 'nur-eine-zeile')
+  await waitFor(() => sloppy.errors.length > errorsBefore, 8000, 'Fehler bei einzeiliger Abgabe')
+  check(
+    'Einzeilige Abgabe in Runde 1 wird klar abgelehnt',
+    sloppy.errors.at(-1).includes('zwei Zeilen'),
+    sloppy.errors.at(-1)
+  )
+  check(
+    'Abgelehnte Abgabe zaehlt nicht als abgegeben',
+    !host.state.submittedPlayerIds.includes(sloppy.playerId),
+    JSON.stringify(host.state.submittedPlayerIds)
+  )
+
   for (const client of clients) {
     client.socket.emit('submit-text', `${client.nickname}-r1a\n${client.nickname}-r1b`)
   }
   await waitFor(() => host.state?.roundComplete, 8000, 'Runde 1 komplett')
+  check('Runde 1 wird nach dem Nachbessern fertig', host.state.roundComplete === true)
 
   host.socket.emit('next-round')
   await waitFor(() => late.rounds.includes(2), 8000, 'Nachzuegler bekommt Runde 2')

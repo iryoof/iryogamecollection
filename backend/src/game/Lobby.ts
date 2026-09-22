@@ -244,19 +244,19 @@ export class Lobby {
 
   submitText(playerId: string, text: string): void {
     if (!this.gameStarted) {
-      throw new Error('Game not started')
+      throw new Error('Das Spiel läuft nicht.')
     }
     if (this.gameEnded) {
-      throw new Error('Game ended')
+      throw new Error('Das Spiel ist beendet.')
     }
     if (this.hasPlayerSubmitted(playerId, this.currentRound)) {
-      throw new Error('Text already submitted')
+      throw new Error('Du hast in dieser Runde schon abgegeben.')
     }
 
     const sheetOwner = this.getAssignedSheetOwner(playerId, this.currentRound)
     const sheet = this.sheets.get(sheetOwner)
     if (!sheet) {
-      throw new Error('Sheet not found')
+      throw new Error('Kein Blatt gefunden.')
     }
 
     const author = this.players.get(playerId)?.nickname || 'Unknown'
@@ -265,7 +265,7 @@ export class Lobby {
       : [text.trim()]
 
     if (this.currentRound === 1 && lines.length < 2) {
-      throw new Error('Need two lines in first round')
+      throw new Error('In der ersten Runde brauchst du zwei Zeilen — deine Abgabe wurde nicht gezählt.')
     }
 
     lines.slice(0, this.currentRound === 1 ? 2 : 1).forEach(lineText => {
@@ -286,10 +286,10 @@ export class Lobby {
 
   nextRound(): void {
     if (this.gameEnded) {
-      throw new Error('Game ended')
+      throw new Error('Das Spiel ist beendet.')
     }
     if (!this.haveAllPlayersSubmitted()) {
-      throw new Error('Round is not complete')
+      throw new Error('Die Runde ist noch nicht fertig.')
     }
     // A round boundary is the only safe moment to let latecomers in: nobody is
     // mid-sheet, so the changed rotation cannot pull a sheet out from under
@@ -450,13 +450,13 @@ export class Lobby {
 
   submitVote(playerId: string, textIndex: number): void {
     if (!this.votingActive || !this.pendingArchive) {
-      throw new Error('Voting not active')
+      throw new Error('Es läuft gerade keine Abstimmung.')
     }
     if (this.votes.has(playerId)) {
-      throw new Error('Vote already submitted')
+      throw new Error('Du hast schon abgestimmt.')
     }
     if (textIndex < 0 || textIndex >= this.pendingArchive.finalTexts.length) {
-      throw new Error('Invalid vote')
+      throw new Error('Ungültige Stimme.')
     }
     this.votes.set(playerId, textIndex)
   }
