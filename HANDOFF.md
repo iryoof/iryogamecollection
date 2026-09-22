@@ -8,6 +8,62 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-22 — Simuliert, dabei einen hängenden Votekick gefunden
+
+### Gemacht
+
+`0b50cad` **Votekick bricht ab, sobald Ja rechnerisch unmöglich ist**, plus
+`scripts/sim-neue-features.mjs`.
+
+### Warum
+
+Der Stand vom Vortag war nur typgeprüft und gebaut, nie mit echten Clients
+gespielt. Das Nachholen hat sofort einen Fehler gefunden: bei zwei
+Stimmberechtigten braucht ein Kick beide Ja-Stimmen, ein Nein erledigt ihn also.
+Die Abstimmung brach aber erst bei einer Nein-*Mehrheit* ab, und ein Nein von
+zwei ist keine Mehrheit — das Panel blieb 60 Sekunden hängen, der Knopf „Nein,
+behalten" sah kaputt aus. Neue Regel: Abbruch, sobald `eligible - Nein < needed`.
+Die alte Bedingung war ein Sonderfall davon.
+
+Das Skript ist nach dem Muster von `stress-test.mjs` gebaut (Backend als
+Kindprozess, echte socket.io-Clients). Als Unit-Test auf die Klassen hätte es
+genau das nicht gefunden: der Fehler lag im Zusammenspiel von Auszählung und
+Broadcast, nicht in der Schwelle selbst.
+
+### Geprüft
+
+- `node scripts/sim-neue-features.mjs`: **40/40**, voller Lauf ~73s. Der lange
+  Teil ist ein 65-Sekunden-Warten, das zeigt, dass im laufenden Spiel wirklich
+  kein Eviction-Timer mehr feuert. `--schnell` überspringt ihn (39/39, ~10s).
+- `npx tsx scripts/check-votekick.mjs`: 11/11, um zwei Fälle zur neuen
+  Abbruchregel erweitert.
+- `node scripts/stress-test.mjs`: alle 6 Szenarien grün — keine Regression
+  durch Bank-Spieler, Votekick oder den geänderten Disconnect-Pfad.
+- `npm run type-check`, `npm run build`: laufen durch.
+- Render-Backend per Socket-Probe geprüft: `lobby:votekick:start` und
+  `wvl:votekick:start` antworten inzwischen, der Deploy von `b98b2f9` ist also
+  oben. Am Vortag kam auf dieselbe Probe keine Antwort.
+
+### Fallstricke
+
+- **Cypher verlangt in Runde 1 zwei Zeilen pro Abgabe**, ab Runde 2 genau eine
+  (`Lobby.submitText`). Eine einzeilige Abgabe in Runde 1 wird kommentarlos als
+  Fehler abgewiesen, die Runde wird nie fertig. Hat im Simulationsskript Zeit
+  gekostet, ist dort jetzt kommentiert.
+- Render Free-Tier schläft ein: die erste Socket-Verbindung läuft in den
+  Connect-Timeout, weil der Kaltstart länger dauert. Erst per `curl /health`
+  wecken, dann verbinden.
+
+### Offen
+
+- `0b50cad` ist committet, aber **nicht gepusht** — das Backend auf Render läuft
+  noch mit der hängenden Variante.
+- Die Punkte aus dem Eintrag vom 2026-09-21 gelten unverändert weiter
+  (Wavelength-Panel in Voting/Ergebnis, Bank-Spieler ohne Stimmrecht,
+  `reconnectionAttempts: 5`).
+
+---
+
 ## 2026-09-21 (später) — Reconnect ohne Limit, Votekick, Nachjoinen
 
 ### Gemacht
