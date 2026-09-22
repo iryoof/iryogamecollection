@@ -311,6 +311,10 @@ export class WavelengthLobby {
 
     const targetPlayer = this.players.get(targetPlayerId)
     if (!targetPlayer || targetPlayer.isDisconnected) return false
+    // Wer erst ab der naechsten Runde dabei ist, sitzt diese komplett aus und
+    // bekommt deshalb auch keine Frage - sonst zieht eine Frage an ihn die
+    // Runde in die Laenge, an der er gar nicht teilnimmt.
+    if (targetPlayer.isWaitingForNextRound) return false
 
     if (this.questionsAndAnswers.some(entry => entry.playerId === targetPlayerId)) {
       return false

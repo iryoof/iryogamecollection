@@ -389,7 +389,8 @@ async function wavelengthClient(serverUrl, nickname) {
     game: null,
     phase: null,
     kickedReason: null,
-    voteKick: null
+    voteKick: null,
+    voteKickResults: []
   }
   socket.on('wvl:lobby:update', state => { client.lobby = state; client.phase = 'waiting' })
   socket.on('wvl:voting:started', state => { client.lobby = state; client.phase = 'voting' })
@@ -397,7 +398,43 @@ async function wavelengthClient(serverUrl, nickname) {
   socket.on('wvl:result:state', state => { client.game = state; client.phase = 'result' })
   socket.on('wvl:lobby:kicked', reason => { client.kickedReason = reason })
   socket.on('wvl:votekick:state', state => { client.voteKick = state })
+  socket.on('wvl:votekick:result', result => client.voteKickResults.push(result))
   return client
+}
+
+// Startet eine Abstimmung, laesst sie an Nein-Stimmen scheitern und prueft, dass
+// beides in der angegebenen Phase ueberhaupt durchkommt.
+//
+// Wie viele Nein noetig sind, haengt an der Zahl der Stimmberechtigten, und die
+// ist phasenabhaengig: ein Wavelength-Nachzuegler sitzt zwar die Runde aus, ist
+// aber verbunden und damit stimmberechtigt. Deshalb stimmen hier alle
+// uebergebenen Spieler der Reihe nach mit Nein, bis das Ergebnis da ist.
+async function votekickInPhase(phase, starter, voters, targetId) {
+  const observer = voters[0]
+  starter.voteKick = null
+  voters.forEach(voter => { voter.voteKick = null })
+  const resultsBefore = observer.voteKickResults.length
+
+  const started = await ask(starter.socket, 'wvl:votekick:start', targetId)
+  check(`Abstimmung startet in Phase "${phase}"`, !started.error, JSON.stringify(started))
+  await waitFor(() => observer.voteKick, 8000, `Abstimmung sichtbar in ${phase}`)
+  check(
+    `Abstimmung erreicht die anderen in "${phase}"`,
+    observer.voteKick.targetId === targetId,
+    JSON.stringify(observer.voteKick)
+  )
+
+  for (const voter of voters) {
+    if (observer.voteKickResults.length > resultsBefore) break
+    await ask(voter.socket, 'wvl:votekick:vote', false)
+    await delay(150)
+  }
+  await waitFor(() => observer.voteKickResults.length > resultsBefore, 8000, `Ergebnis in ${phase}`)
+  check(
+    `Nein beendet die Abstimmung in "${phase}"`,
+    observer.voteKickResults.at(-1).outcome === 'failed',
+    JSON.stringify(observer.voteKickResults.at(-1))
+  )
 }
 
 async function szenarioWavelength(serverUrl) {
@@ -415,6 +452,12 @@ async function szenarioWavelength(serverUrl) {
 
   await ask(anna.socket, 'wvl:lobby:start')
   await waitFor(() => anna.phase === 'voting', 8000, 'Abstimmungsphase')
+
+  // Votekick aus dem Abstimmungsbildschirm heraus - dort gibt es seit dem
+  // Panel-Nachbau eine Oberflaeche dafuer.
+  const cemId = (anna.lobby.players.find(player => player.name === 'Cem') || {}).id
+  await votekickInPhase('voting', anna, [ben], cemId)
+
   for (const client of [anna, ben, cem]) {
     await ask(client.socket, 'wvl:vote', 7)
   }
@@ -440,6 +483,16 @@ async function szenarioWavelength(serverUrl) {
   const all = [anna, ben, cem]
   const seeker = all.find(client => client.game.myId === seekerId)
   const others = all.filter(client => client.game.myId !== seekerId)
+
+  // Und sie darf gar nicht erst gefragt werden: eine Frage an jemanden, der die
+  // Runde aussitzt, wuerde die Runde unnoetig in die Laenge ziehen.
+  const doraId = doraInRoster.id
+  const askedDora = await ask(seeker.socket, 'wvl:ask-question', doraId, 'Frage an Dora?')
+  check(
+    'Nachzuegler kann nicht befragt werden',
+    !!askedDora.error,
+    JSON.stringify(askedDora)
+  )
   for (const other of others) {
     await ask(seeker.socket, 'wvl:ask-question', other.game.myId, `Frage an ${other.nickname}?`)
     await waitFor(() => other.game?.canAnswerQuestion, 8000, `${other.nickname} hat eine Frage`)
@@ -450,6 +503,11 @@ async function szenarioWavelength(serverUrl) {
 
   await ask(seeker.socket, 'wvl:make-guess', 7)
   await waitFor(() => anna.phase === 'result', 8000, 'Ergebnis')
+
+  // Und aus dem Ergebnisbildschirm heraus.
+  // In dieser Phase ist Dora schon dabei und stimmberechtigt, obwohl sie die
+  // Runde aussitzt - sie muss also mit Nein stimmen, damit es entschieden ist.
+  await votekickInPhase('result', anna, [ben, dora], cem.game.myId)
 
   await ask(anna.socket, 'wvl:play-again')
   await waitFor(() => anna.phase === 'voting' || anna.phase === 'waiting', 8000, 'naechste Runde')

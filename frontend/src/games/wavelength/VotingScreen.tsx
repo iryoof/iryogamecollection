@@ -1,15 +1,19 @@
 ﻿import { useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { WavelengthAck, WavelengthLobbyState } from './types'
+import VoteKickPanel from '../../components/VoteKickPanel'
+import PlayerRoster from './PlayerRoster'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface VotingScreenProps {
   socket: Socket
   lobby: WavelengthLobbyState
   selfPlayerId: string | null
   onError: (message: string) => void
+  voteKick: VoteKickApi
 }
 
-export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: VotingScreenProps) {
+export default function VotingScreen({ socket, lobby, selfPlayerId, onError, voteKick }: VotingScreenProps) {
   const [selectedNumber, setSelectedNumber] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -62,6 +66,18 @@ export default function VotingScreen({ socket, lobby, selfPlayerId, onError }: V
             Deine Verbindung ist gerade unterbrochen. Bitte stelle sie wieder her.
           </div>
         )}
+
+        <VoteKickPanel vote={voteKick.vote} selfPlayerId={selfPlayerId} onVote={voteKick.castVote} />
+        {voteKick.notice && (
+          <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+        )}
+
+        <PlayerRoster
+          players={lobby.players}
+          selfPlayerId={selfPlayerId}
+          voteKick={voteKick}
+          votedPlayerIds={lobby.votedPlayerIds}
+        />
 
         <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
           <div className="grid grid-cols-5 gap-3">

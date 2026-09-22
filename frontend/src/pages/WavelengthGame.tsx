@@ -307,6 +307,7 @@ export default function WavelengthGame() {
         lobby={lobbyData}
         selfPlayerId={session?.playerId ?? null}
         onError={setError}
+        voteKick={voteKickApi}
       />
     )
   }
@@ -316,7 +317,7 @@ export default function WavelengthGame() {
   }
 
   if (screen === 'result' && gameData) {
-    return <ResultScreen socket={socket} gameState={gameData} onError={setError} />
+    return <ResultScreen socket={socket} gameState={gameData} onError={setError} voteKick={voteKickApi} />
   }
 
   return (

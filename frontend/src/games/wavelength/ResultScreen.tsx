@@ -1,13 +1,17 @@
 ﻿import type { Socket } from 'socket.io-client'
 import type { WavelengthAck, WavelengthGameState } from './types'
+import VoteKickPanel from '../../components/VoteKickPanel'
+import PlayerRoster from './PlayerRoster'
+import type { VoteKickApi } from '../../hooks/useVoteKick'
 
 interface ResultScreenProps {
   socket: Socket
   gameState: WavelengthGameState
   onError: (message: string) => void
+  voteKick: VoteKickApi
 }
 
-export default function ResultScreen({ socket, gameState, onError }: ResultScreenProps) {
+export default function ResultScreen({ socket, gameState, onError, voteKick }: ResultScreenProps) {
   const isHost = gameState.isHost
   const isCorrect = !!gameState.isCorrect
   const seekerGuess = gameState.seekerGuess ?? '—'
@@ -40,6 +44,18 @@ export default function ResultScreen({ socket, gameState, onError }: ResultScree
             {gameState.seekerName} tippte auf {seekerGuess}. Die richtige Zahl war {gameState.targetNumber}.
           </p>
         </div>
+
+        <VoteKickPanel vote={voteKick.vote} selfPlayerId={gameState.myId} onVote={voteKick.castVote} />
+        {voteKick.notice && (
+          <div className="alert-surface rounded-2xl px-4 py-3 text-sm">{voteKick.notice}</div>
+        )}
+
+        <PlayerRoster
+          players={gameState.players}
+          selfPlayerId={gameState.myId}
+          voteKick={voteKick}
+          seekerId={gameState.seekerId}
+        />
 
         <div className="screen-shell rounded-[2rem] p-6 md:p-8 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
