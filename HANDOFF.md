@@ -58,6 +58,21 @@ Code-Aufteilung per `React.lazy` aus `1d5b9b8` hat damit nichts zu tun.
   Beitreten ausgeführt, Lobby zeigt beide Spieler.
 - `npm run type-check`, `npm run build`: grün.
 
+### Fallstrick beim Deploy-Nachweis
+
+Seit der Code-Aufteilung in `1d5b9b8` liegt der Code jedes Spiels in einem
+**eigenen Chunk**. Eine Deploy-Prüfung, die im Hauptbundle
+(`assets/index-*.js`) nach einer geänderten Zeichenkette sucht, greift für
+Spiel-Änderungen deshalb ins Leere und meldet fälschlich „noch der alte Stand".
+
+Richtig ist: aus `index.html` das Hauptbundle ziehen, dort den Chunknamen des
+Spiels (`assets/CypherGame-*.js`) auslesen und **in diesem** suchen. Genau so
+wurde der Fix hier belegt — im ausgelieferten `CypherGame-CZ7VCPlU.js` steht
+`.origin}/iryogamecollection/`}?code=${encodeURIComponent(S)}#/cypher`.
+
+Zusätzlich live geprüft: `…/iryogamecollection/?code=ABC123#/cypher` landet auf
+„Lobby beitreten" mit vorausgefülltem Code.
+
 ### Offen
 
 - Wer bin ich und Wavelength haben **gar keinen** Einladungslink, dort wird nur
