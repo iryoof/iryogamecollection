@@ -1,12 +1,45 @@
-import { Lobby } from './Lobby'
+﻿import { Lobby } from './Lobby'
 import { GameSettings, GameArchive } from 'shared/types'
 import { generateLobbyCode } from '../utils/codeGenerator'
+
+/**
+ * Wie lange eine leer gewordene Lobby noch aufgehoben wird.
+ *
+ * Vorher wurde sie in dem Moment geloescht, in dem der letzte Spieler
+ * rausflog — und genau das passiert reihenweise, wenn die Verbindung fuer alle
+ * gleichzeitig abreisst (Kaltstart der Instanz, WLAN weg). Der Code war damit
+ * tot, und alle sahen beim Zurueckkommen "Lobby not found", obwohl der Server
+ * durchgehend lief. Eine Viertelstunde reicht, um wieder hereinzufinden.
+ */
+const EMPTY_LOBBY_TTL_MS = 15 * 60_000
 
 export class GameManager {
   private lobbies: Map<string, Lobby> = new Map()
   private playerLobbies: Map<string, string> = new Map() // playerId -> lobbyCode
   private archives: GameArchive[] = []
   private totalGamesPlayed: number = 0
+  /** Laufende Loeschfristen leerer Lobbys, damit ein Beitritt sie abbrechen kann. */
+  private emptyLobbyTimers: Map<string, NodeJS.Timeout> = new Map()
+
+  private cancelEmptyLobbyTimer(code: string): void {
+    const timer = this.emptyLobbyTimers.get(code)
+    if (!timer) return
+    clearTimeout(timer)
+    this.emptyLobbyTimers.delete(code)
+  }
+
+  private scheduleEmptyLobbyRemoval(code: string): void {
+    this.cancelEmptyLobbyTimer(code)
+    const timer = setTimeout(() => {
+      this.emptyLobbyTimers.delete(code)
+      const lobby = this.lobbies.get(code)
+      // In der Zwischenzeit kann jemand zurueckgekommen sein.
+      if (!lobby || !lobby.isEmpty()) return
+      this.removeLobby(code)
+      console.log(`Leere Lobby ${code} nach Frist entfernt`)
+    }, EMPTY_LOBBY_TTL_MS)
+    this.emptyLobbyTimers.set(code, timer)
+  }
 
   createLobby(hostId: string, hostNickname: string, settings: GameSettings): Lobby {
     let code = generateLobbyCode()
@@ -40,6 +73,9 @@ export class GameManager {
       throw new Error('Lobby is full')
     }
 
+    // Zurueckgekommen, bevor die Frist ablief: Lobby behalten.
+    this.cancelEmptyLobbyTimer(normalizedCode)
+
     if (lobby.hasPlayer(playerId)) {
       lobby.updatePlayerNickname(playerId, nickname)
     } else {
@@ -61,6 +97,7 @@ export class GameManager {
   }
 
   removeLobby(code: string): void {
+    this.cancelEmptyLobbyTimer(code)
     const lobby = this.lobbies.get(code)
     if (lobby) {
       lobby.getPlayers().forEach(player => {
@@ -76,10 +113,11 @@ export class GameManager {
       const lobby = this.lobbies.get(code)
       if (lobby) {
         lobby.removePlayer(playerId)
-        
-        // Remove empty lobbies
+
+        // Leere Lobby nicht sofort wegwerfen, sondern eine Frist geben - siehe
+        // EMPTY_LOBBY_TTL_MS.
         if (lobby.isEmpty()) {
-          this.removeLobby(code)
+          this.scheduleEmptyLobbyRemoval(code)
         }
       }
     }

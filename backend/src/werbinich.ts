@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+﻿import { randomUUID } from 'node:crypto'
 import { Server as SocketIOServer, Socket } from 'socket.io'
 import {
   cancelVoteKick,
@@ -11,7 +11,11 @@ import {
   VoteKickState
 } from './game/VoteKick'
 
-const RECONNECT_GRACE_MS = 120_000
+// Waren 120s. Ein Kaltstart der Render-Instanz dauert rund 50s, in denen
+// niemand verbinden kann - zusammen mit dem Wiederverbinden wurde das zu
+// knapp. Fuenf Minuten decken das ab; gegen Karteileichen gibt es den
+// Votekick.
+const RECONNECT_GRACE_MS = 5 * 60_000
 
 interface WerBinIchSession {
   playerId: string
@@ -71,6 +75,34 @@ function generateCode(): string {
     code += chars[Math.floor(Math.random() * chars.length)]
   }
   return code
+}
+
+/**
+ * Wie lange eine leer gewordene Lobby noch aufgehoben wird. Wurde sie sofort
+ * geloescht, war der Code tot, sobald allen gleichzeitig die Verbindung abriss -
+ * und beim Zurueckkommen stand da "Lobby nicht gefunden".
+ */
+const EMPTY_LOBBY_TTL_MS = 15 * 60_000
+const emptyLobbyTimers = new Map<string, NodeJS.Timeout>()
+
+function cancelEmptyLobbyTimer(code: string) {
+  const timer = emptyLobbyTimers.get(code)
+  if (!timer) return
+  clearTimeout(timer)
+  emptyLobbyTimers.delete(code)
+}
+
+function scheduleEmptyLobbyRemoval(code: string) {
+  cancelEmptyLobbyTimer(code)
+  const timer = setTimeout(() => {
+    emptyLobbyTimers.delete(code)
+    const lobby = werBinIchLobbies.get(code)
+    // Inzwischen kann jemand zurueckgekommen sein.
+    if (!lobby || lobby.players.length > 0) return
+    werBinIchLobbies.delete(code)
+    console.log(`Leere Wer-bin-ich-Lobby ${code} nach Frist entfernt`)
+  }, EMPTY_LOBBY_TTL_MS)
+  emptyLobbyTimers.set(code, timer)
 }
 
 function cancelEviction(playerId: string) {
@@ -291,7 +323,7 @@ function removePlayerFromLobby(io: SocketIOServer, lobby: WerBinIchLobby, player
   }
 
   if (lobby.players.length === 0) {
-    werBinIchLobbies.delete(lobby.code)
+    scheduleEmptyLobbyRemoval(lobby.code)
     return
   }
 
@@ -407,7 +439,9 @@ function handleVoteKickChange(io: SocketIOServer, lobbyCode: string, targetId: s
 
     const lobby = werBinIchLobbies.get(lobbyCode)
     if (!lobby) return
-    void evictPlayer(io, lobby, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+    evictPlayer(io, lobby, targetId, 'Die Lobby hat dich per Abstimmung entfernt.').catch(
+      error => console.error('Votekick-Entfernung fehlgeschlagen:', error)
+    )
   }
 }
 
@@ -452,10 +486,23 @@ export function setupWerBinIchSocketHandlers(io: SocketIOServer) {
           return
         }
 
+        // In eine leer gewordene Lobby zurueckgekommen: sie gehoert sonst einem
+        // Host, den es nicht mehr gibt, und niemand koennte starten. Die alte
+        // Runde ist ohnehin verloren, also zurueck in den Wartebereich.
+        const lobbyWasEmpty = lobby.players.length === 0
+        if (lobbyWasEmpty) {
+          lobby.state = 'waiting'
+          lobby.assignments = {}
+          lobby.words = {}
+          lobby.solved = {}
+          lobby.solvedInfo = {}
+        }
+        cancelEmptyLobbyTimer(lobby.code)
+
         const player: WerBinIchPlayer = {
           id: randomUUID(),
           name: name.trim(),
-          isHost: false,
+          isHost: lobbyWasEmpty,
           reconnectKey: randomUUID(),
           reconnectDeadline: null,
           isDisconnected: false

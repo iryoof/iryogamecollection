@@ -75,7 +75,12 @@ export default function WavelengthGame() {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
+      // Unbegrenzt, frueher 5. Bei 1-5s Abstand gab der Client nach rund 25
+      // Sekunden endgueltig auf - ein Kaltstart der Render-Instanz dauert aber
+      // etwa 50. Danach verband sich niemand mehr, und der Server warf alle aus
+      // der Lobby. reconnectionDelayMax deckelt den Abstand, es wird also nicht
+      // dauerhaft im Sekundentakt gehaemmert.
+      reconnectionAttempts: Infinity,
       transports: ['websocket', 'polling']
     })
 

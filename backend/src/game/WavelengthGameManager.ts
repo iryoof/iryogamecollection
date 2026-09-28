@@ -1,9 +1,36 @@
 ﻿import { WavelengthLobby, WavelengthPlayer } from './WavelengthLobby'
 import { generateLobbyCode } from '../utils/codeGenerator'
 
+/**
+ * Wie lange eine leer gewordene Lobby noch aufgehoben wird. Wurde sie sofort
+ * geloescht, war der Code tot, sobald allen gleichzeitig die Verbindung abriss.
+ */
+const EMPTY_LOBBY_TTL_MS = 15 * 60_000
+
 export class WavelengthGameManager {
   private lobbies: Map<string, WavelengthLobby> = new Map()
   private playerLobbies: Map<string, string> = new Map()
+  private emptyLobbyTimers: Map<string, NodeJS.Timeout> = new Map()
+
+  private cancelEmptyLobbyTimer(code: string): void {
+    const timer = this.emptyLobbyTimers.get(code)
+    if (!timer) return
+    clearTimeout(timer)
+    this.emptyLobbyTimers.delete(code)
+  }
+
+  private scheduleEmptyLobbyRemoval(code: string): void {
+    this.cancelEmptyLobbyTimer(code)
+    const timer = setTimeout(() => {
+      this.emptyLobbyTimers.delete(code)
+      const lobby = this.lobbies.get(code)
+      // Inzwischen kann jemand zurueckgekommen sein.
+      if (!lobby || lobby.getPlayers().length > 0) return
+      this.lobbies.delete(code)
+      console.log(`Leere Wavelength-Lobby ${code} nach Frist entfernt`)
+    }, EMPTY_LOBBY_TTL_MS)
+    this.emptyLobbyTimers.set(code, timer)
+  }
 
   createLobby(hostId: string, hostName: string): WavelengthLobby {
     let code = generateLobbyCode()
@@ -40,7 +67,15 @@ export class WavelengthGameManager {
       throw new Error('Name already taken')
     }
 
+    // Zurueckgekommen, bevor die Frist ablief.
+    this.cancelEmptyLobbyTimer(normalizedCode)
+    const lobbyWasEmpty = lobby.getPlayers().length === 0
+
     lobby.addPlayer(playerId, playerName, waitForNextRound)
+    // Sonst gehoerte die Lobby einem Host, den es nicht mehr gibt.
+    if (lobbyWasEmpty) {
+      lobby.adoptEmptyLobby(playerId)
+    }
     this.playerLobbies.set(playerId, normalizedCode)
 
     console.log(`Player ${playerName} joined Wavelength lobby ${normalizedCode}`)
@@ -75,6 +110,7 @@ export class WavelengthGameManager {
   }
 
   removeLobby(code: string): void {
+    this.cancelEmptyLobbyTimer(code)
     const normalizedCode = code.trim().toUpperCase()
     const lobby = this.lobbies.get(normalizedCode)
     if (!lobby) return
@@ -99,8 +135,9 @@ export class WavelengthGameManager {
     lobby.removePlayer(playerId)
     this.playerLobbies.delete(playerId)
 
+    // Leere Lobby nicht sofort wegwerfen - siehe EMPTY_LOBBY_TTL_MS.
     if (lobby.getPlayers().length === 0) {
-      this.lobbies.delete(code)
+      this.scheduleEmptyLobbyRemoval(code)
     }
   }
 

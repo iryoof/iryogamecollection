@@ -303,6 +303,38 @@ async function szenarioVotekickCypher(serverUrl) {
   clients.forEach(client => client.socket.disconnect())
 }
 
+async function szenarioLeereLobbyUeberlebt(serverUrl) {
+  console.log('\n=== Cypher: leere Lobby ueberlebt und nimmt Rueckkehrer auf ===')
+  const { clients, host, code } = await cypherLobby(serverUrl, ['Anna', 'Ben', 'Cem'])
+  await cypherStart(host, clients)
+
+  // Alle verlassen die Lobby. Vorher wurde sie in genau diesem Moment geloescht
+  // und der Code war tot - das ist das "Lobby not found", ueber das David
+  // gestolpert ist.
+  for (const client of clients) {
+    client.socket.emit('leave-lobby')
+    await delay(150)
+  }
+  await delay(500)
+  clients.forEach(client => client.socket.disconnect())
+
+  const returning = await cypherClient(serverUrl, `p-back-${Date.now()}`, 'Dora')
+  returning.socket.emit('join-lobby', code, returning.nickname, returning.playerId)
+  await waitFor(() => returning.state, 8000, 'Rueckkehr in die leere Lobby')
+
+  check('Leere Lobby ist noch da', returning.state.lobbyCode === code, JSON.stringify(returning.state?.lobbyCode))
+  check('Kein Fehler beim Beitritt', returning.errors.length === 0, JSON.stringify(returning.errors))
+  check(
+    'Rueckkehrer wird Host',
+    returning.state.hostId === returning.playerId,
+    `hostId=${returning.state.hostId}, ich=${returning.playerId}`
+  )
+  check('Partie ist zurueckgesetzt', returning.state.gameStarted === false, JSON.stringify(returning.state.gameStarted))
+  check('Roster besteht nur aus dem Rueckkehrer', returning.state.players.length === 1, JSON.stringify(returning.state.players.map(p => p.nickname)))
+
+  returning.socket.disconnect()
+}
+
 // ---------------------------------------------------------- Wer bin ich ----
 
 async function werBinIchClient(serverUrl, nickname) {
@@ -532,6 +564,7 @@ async function main() {
     await szenarioReconnectOhneLimit(serverUrl)
     await szenarioNachjoinenCypher(serverUrl)
     await szenarioVotekickCypher(serverUrl)
+    await szenarioLeereLobbyUeberlebt(serverUrl)
     await szenarioWerBinIch(serverUrl)
     await szenarioWavelength(serverUrl)
   } catch (error) {

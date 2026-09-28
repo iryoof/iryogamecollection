@@ -13,7 +13,11 @@ import {
   VoteKickState
 } from './game/VoteKick'
 
-const RECONNECT_GRACE_MS = 120_000
+// Waren 120s. Ein Kaltstart der Render-Instanz dauert rund 50s, in denen
+// niemand verbinden kann - zusammen mit dem Wiederverbinden wurde das zu
+// knapp. Fuenf Minuten decken das ab; gegen Karteileichen gibt es den
+// Votekick.
+const RECONNECT_GRACE_MS = 5 * 60_000
 const wavelengthGameManager = new WavelengthGameManager()
 const evictionTimers = new Map<string, NodeJS.Timeout>()
 
@@ -229,7 +233,9 @@ function handleVoteKickChange(io: SocketIOServer, code: string, targetId: string
     io.to(code).emit('wvl:votekick:result', { targetName, outcome })
     if (outcome !== 'passed') return
 
-    void evictPlayer(io, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+    evictPlayer(io, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.').catch(
+      error => console.error('Votekick-Entfernung fehlgeschlagen:', error)
+    )
   }
 }
 

@@ -119,6 +119,21 @@ httpServer.listen(port, () => {
   console.log('ðŸ“¡ WebSocket ready for connections')
 })
 
+// Alle Lobbys liegen im Arbeitsspeicher dieses Prozesses. Stirbt er, verlieren
+// *alle* laufenden Runden ihren Spielstand und sehen "Lobby not found" — ein
+// einzelner unbehandelter Fehler in einem Timer oder einer async-Funktion
+// reicht dafuer, weil Node seit Version 15 bei unbehandelten Promise-Ablehnungen
+// beendet. Deshalb wird hier laut geloggt und weitergelaufen: ein womoeglich
+// inkonsistenter Einzelfall ist erheblich weniger schlimm als der Totalverlust
+// aller Lobbys.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unbehandelte Promise-Ablehnung (Prozess laeuft weiter):', reason)
+})
+
+process.on('uncaughtException', (error) => {
+  console.error('Unbehandelte Ausnahme (Prozess laeuft weiter):', error)
+})
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server')

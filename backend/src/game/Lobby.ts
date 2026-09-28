@@ -60,11 +60,39 @@ export class Lobby {
     return this.archiveId
   }
 
+  /**
+   * Erster Spieler in einer leer gewordenen Lobby: er wird Host, und eine noch
+   * als laufend markierte Partie wird zurueckgesetzt.
+   *
+   * Leer werden kann die Lobby nur, wenn vorher alle gegangen oder rausgeflogen
+   * sind — die alte Runde ist dann ohnehin verloren. Ohne das Zuruecksetzen
+   * gehoerte die Lobby einem nicht mehr vorhandenen Host, niemand koennte
+   * starten, und der Zurueckkehrende landete auf der Bank fuer eine Runde, die
+   * nie weitergeht.
+   */
+  private adoptEmptyLobby(playerId: string): void {
+    this.hostId = playerId
+    this.gameStarted = false
+    this.gameEnded = false
+    this.votingActive = false
+    this.currentRound = 0
+    this.votes.clear()
+    this.submissionsByRound.clear()
+    this.pendingArchive = null
+    this.orphanedSheets.clear()
+    this.sheets = new Map()
+    this.playerOrder = []
+  }
+
   addPlayer(playerId: string, nickname: string): void {
     const player: Player = {
       id: playerId,
       nickname,
       isReady: false
+    }
+
+    if (this.players.size === 0 && this.pendingPlayers.size === 0) {
+      this.adoptEmptyLobby(playerId)
     }
 
     // Joining a running game puts the player on the bench until the next round.

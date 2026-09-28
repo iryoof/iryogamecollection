@@ -1,4 +1,4 @@
-import { Server as SocketIOServer, Socket } from 'socket.io'
+﻿import { Server as SocketIOServer, Socket } from 'socket.io'
 import { GameManager } from './game/GameManager'
 import { Lobby } from './game/Lobby'
 import {
@@ -15,7 +15,12 @@ import {
 // Window within which a disconnected player may reconnect before being
 // evicted. Only applies while the lobby is still in the waiting room — during
 // a running game the seat is held indefinitely, see keepsSeatIndefinitely().
-const RECONNECT_GRACE_MS = 60_000
+//
+// Waren 60s, und das war zu knapp: ein Kaltstart der Render-Instanz dauert rund
+// 50s, in denen niemand verbinden kann. Wer dann zurueckkommt, war laengst
+// rausgeworfen. Fuenf Minuten decken einen Kaltstart samt Wiederverbinden ab;
+// gegen Karteileichen gibt es inzwischen den Votekick.
+const RECONNECT_GRACE_MS = 5 * 60_000
 
 // Map of playerId -> pending eviction timer. Stored at module scope so all
 // sockets (reconnects) can find & cancel a timer that belongs to a prior
@@ -127,7 +132,9 @@ function handleVoteKickChange(
     if (!outcome) return
 
     if (outcome === 'passed') {
-      void evictPlayer(io, gameManager, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.')
+      evictPlayer(io, gameManager, code, targetId, 'Die Lobby hat dich per Abstimmung entfernt.').catch(
+        error => console.error('Votekick-Entfernung fehlgeschlagen:', error)
+      )
       io.to(code).emit('votekick:result', { targetName, outcome })
       return
     }

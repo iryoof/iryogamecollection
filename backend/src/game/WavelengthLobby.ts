@@ -144,6 +144,22 @@ export class WavelengthLobby {
     return this.players.has(playerId)
   }
 
+  /**
+   * Erster Spieler in einer leer gewordenen Lobby: er wird Host, und eine noch
+   * als laufend markierte Runde wird zurueckgesetzt. Leer werden kann die Lobby
+   * nur, wenn vorher alle weg waren — die Runde ist dann ohnehin verloren, und
+   * ohne das Zuruecksetzen gehoerte die Lobby einem Host, den es nicht mehr
+   * gibt.
+   */
+  adoptEmptyLobby(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player) return
+    this.hostId = playerId
+    player.isHost = true
+    player.isWaitingForNextRound = false
+    this.resetRoundState('waiting')
+  }
+
   hasPlayerName(playerName: string): boolean {
     const normalized = playerName.trim().toLowerCase()
     return this.getPlayers().some(player => player.name.trim().toLowerCase() === normalized)
