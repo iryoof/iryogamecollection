@@ -79,7 +79,17 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
 
   const handleCopyInviteLink = async () => {
     if (!lobbyCode || typeof window === 'undefined') return
-    const link = `${window.location.origin}/?code=${encodeURIComponent(lobbyCode)}`
+    // Zwei Dinge, die hier falsch waren und den Link unbrauchbar gemacht haben:
+    //
+    // `location.origin` ist auf GitHub Pages nur https://iryoof.github.io — die
+    // App liegt aber unter /iryogamecollection/. Deshalb BASE_URL, das Vite je
+    // nach Build auf '/' oder '/iryogamecollection/' setzt.
+    //
+    // Und ohne '#/cypher' landet der Eingeladene im Portal statt im Beitreten-
+    // Formular: der Code wird erst gelesen, wenn CypherGame gemountet ist. Der
+    // Query-Teil muss vor der Raute stehen, sonst sieht ihn location.search nicht.
+    const base = `${window.location.origin}${import.meta.env.BASE_URL}`
+    const link = `${base}?code=${encodeURIComponent(lobbyCode)}#/cypher`
     try {
       await navigator.clipboard.writeText(link)
       setCopyFeedback('link')
