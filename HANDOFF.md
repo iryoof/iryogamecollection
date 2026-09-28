@@ -8,6 +8,86 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-28 (später) — Rauswurf aus der Lobby und „Lobby not found"
+
+### Gemacht
+
+`1038daf` **Vier Änderungen gegen dieselbe Ursachenkette**, plus eine Härtung
+des Prozesses.
+
+### Die Kette
+
+David meldete „wir fliegen die ganze Zeit aus der Lobby" und „random nach
+gewisser Zeit steht da lobby not found". Beides erklärt sich ohne Absturz:
+
+1. Die Verbindung bricht für alle gleichzeitig ab. Ein **Kaltstart der
+   Render-Instanz dauert gemessen rund 50 Sekunden**, in denen niemand
+   verbinden kann.
+2. Alle vier Socket-Clients standen auf `reconnectionAttempts: 5` bei 1–5s
+   Abstand — nach rund **25 Sekunden geben sie endgültig auf**, also *bevor* das
+   Backend wieder da ist. Danach versucht niemand mehr etwas.
+3. Der Server warf getrennte Spieler im Wartebereich nach 60s (Cypher) bzw.
+   120s (Wer bin ich, Wavelength) raus.
+4. War der letzte draußen, wurde die Lobby **im selben Moment gelöscht**
+   (`GameManager.removePlayer` → `isEmpty()` → `removeLobby`). Ab da liefert
+   jeder Beitritt mit dem Code „Lobby not found", obwohl der Server durchlief.
+
+**Das `reconnectionAttempts: 5` stand seit dem 2026-09-21 als offener Punkt in
+dieser Datei und wurde dreimal nicht angefasst.** Es war die Wurzel.
+
+### Was geändert wurde
+
+- `reconnectionAttempts: Infinity` in `CypherGame.tsx`, `WerBinIchGame.tsx`,
+  `WavelengthGame.tsx`, `services/socketService.ts`. `reconnectionDelayMax`
+  deckelt den Abstand weiter bei 5s.
+- Reconnect-Fenster einheitlich **5 Minuten** statt 60s/120s.
+- Leere Lobbys werden **15 Minuten aufgehoben** statt sofort gelöscht, in allen
+  drei Spielen. Ein Beitritt bricht die Frist ab.
+- **Rückkehrer in eine leere Lobby wird Host**, und eine noch als laufend
+  markierte Partie wird zurückgesetzt. Ohne das gehörte die Lobby einem Host,
+  den es nicht mehr gibt; bei Cypher wäre der Rückkehrer auf der Bank gelandet
+  (`pendingPlayers`) für eine Runde, die nie weitergeht.
+
+### Härtung, die unabhängig davon fehlte
+
+`server.ts` hatte **keine** `unhandledRejection`/`uncaughtException`-Handler.
+Eine abgelehnte Promise beendet Node seit Version 15 sofort — und mit dem
+Prozess sterben *alle* Lobbys. An drei Stellen im Votekick stand
+`void evictPlayer(...)`, dessen Ablehnung niemand auffing. Jetzt wird
+protokolliert statt beendet, plus `.catch()` an den Aufrufen.
+
+### Geprüft
+
+- `scripts/sim-neue-features.mjs --schnell`: **54/54**. Neu: Szenario „leere
+  Lobby überlebt" — alle drei verlassen eine laufende Partie, ein vierter tritt
+  mit demselben Code bei; Lobby da, kein Fehler, er ist Host, Partie
+  zurückgesetzt, Roster nur er.
+- `scripts/stress-test.mjs`: 6/6, keine Regression im Lobby-Lebenszyklus.
+- `npm run type-check`, `npm run build`: grün.
+- Live-Versuch gegen das Backend (zwei Sockets halten eine Lobby offen): über
+  neun Minuten kein Abbruch. Offene Sockets halten die Instanz also wach — die
+  Abbrüche kommen von Neustarts, nicht vom Leerlauf.
+
+### Offen — und das ist die eigentliche Lücke
+
+**Ein Neustart des Backends löscht weiterhin alle Lobbys**, weil alles im
+Arbeitsspeicher liegt (`GameManager`, `werBinIchLobbies`,
+`WavelengthGameManager`). Die Maßnahmen hier sorgen nur dafür, dass Clients
+zurückfinden, *solange der Prozess lebt*. Wer das wirklich abstellen will,
+braucht Persistenz: Lobbys beim Ändern auf Platte schreiben und beim Start
+wieder einlesen — `saveManager.ts` schreibt bereits Archive, der Weg wäre also
+vorgezeichnet. Render Free-Tier recycelt den Prozess regelmäßig.
+
+### Fallstrick (zum zweiten Mal)
+
+Beim Einfügen von Code per Heredoc ist erneut ein Backslash-Escape verlorengegangen:
+aus `\n` wurde ein echter Zeilenumbruch mitten im String, das Skript war nicht
+mehr parsebar. Beim ersten Mal (2026-09-22) war es ein Backspace statt `\b`.
+**Lehre bleibt: nach solchen Einfügungen die Zeile mit `repr()` ansehen, nicht
+mit `cat`.**
+
+---
+
 ## 2026-09-28 — Einladungslink von Cypher repariert
 
 ### Gemacht
