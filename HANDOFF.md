@@ -8,6 +8,66 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-09-28 — Einladungslink von Cypher repariert
+
+### Gemacht
+
+`41562a6` **Der Einladungslink funktionierte nie.** Zwei Fehler in einer Zeile
+in `frontend/src/pages/GameSetup.tsx`:
+
+```
+`${window.location.origin}/?code=${lobbyCode}`
+```
+
+1. `location.origin` ist auf GitHub Pages nur `https://iryoof.github.io` — die
+   App liegt unter `/iryogamecollection/`. Der Link zeigte auf die Wurzel der
+   Pages-Domain.
+2. Ohne Route im Hash landete der Eingeladene im **Portal** statt im
+   Beitreten-Formular. Der Code wird erst gelesen, wenn `CypherGame` gemountet
+   ist; im Portal passiert nichts und der Code ist weg.
+
+Neu: `${window.location.origin}${import.meta.env.BASE_URL}?code=…#/cypher`
+
+### Warum so
+
+`import.meta.env.BASE_URL` statt hartem Pfad, weil Vite das je nach Build auf
+`/` oder `/iryogamecollection/` setzt — **auch im Dev-Server**, der Vite-`base`
+ebenfalls anwendet. Ein hart verdrahtetes `/iryogamecollection/` wäre lokal
+falsch gewesen.
+
+Der Query-Teil muss **vor** der Raute stehen, sonst sieht `location.search` ihn
+nicht. HashRouter ändert daran nichts, und `consumeInviteCode` in
+`CypherGame.tsx` räumt den Query-Teil hinterher weg, ohne den Hash zu verlieren.
+
+### Kein Rückschritt aus meinen Änderungen
+
+Die Zeile kam am **2026-04-27** mit `8ecaf4d` von `devin-ai-integration[bot]`
+so ins Repo (`git log -L 80,84:frontend/src/pages/GameSetup.tsx`). Die
+Code-Aufteilung per `React.lazy` aus `1d5b9b8` hat damit nichts zu tun.
+
+### Geprüft
+
+- `curl`: der alte Link (`https://iryoof.github.io/?code=TEST`) liefert
+  **HTTP 404**, `https://iryoof.github.io/iryogamecollection/?code=TEST`
+  liefert **HTTP 200**.
+- Lokal gegen Vite-Dev-Server und Backend, mit zwei Browser-Tabs durchgespielt:
+  erzeugter Link (per abgefangenem `clipboard.writeText` ausgelesen) lautet
+  `http://localhost:5173/iryogamecollection/?code=POK2QZ#/cypher`; im zweiten
+  Tab geöffnet landet man direkt auf „Lobby beitreten" mit vorausgefülltem Code,
+  der Query-Teil verschwindet danach aus der Adresszeile, der Hash bleibt.
+  Beitreten ausgeführt, Lobby zeigt beide Spieler.
+- `npm run type-check`, `npm run build`: grün.
+
+### Offen
+
+- Wer bin ich und Wavelength haben **gar keinen** Einladungslink, dort wird nur
+  der Code geteilt. Wenn das dort auch gewünscht ist, wäre es dieselbe Zeile
+  mit `#/werbinich` bzw. `#/wavelength` — und ein Ablesen des Codes aus der URL,
+  das es in beiden Spielen noch nicht gibt.
+- Die Punkte aus den früheren Einträgen gelten weiter.
+
+---
+
 ## 2026-09-22 (abends) — Wortpool aus Wikidata, Spielseiten nachgeladen
 
 ### Gemacht
