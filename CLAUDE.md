@@ -125,11 +125,7 @@ Der Gitter-Prüfer läuft je nach Maschine ein bis zwei Minuten.
 ## Deploy
 
 Push auf `main` → GitHub Action (`.github/workflows/`) → `node build.js` → live auf
-https://iryo.bid/
-
-Die Domain steht in `frontend/public/CNAME`; Vite baut mit `base: '/'`, weil die
-Seite in der Wurzel liegt und nicht mehr unter `/iryogamecollection/`. Die alte
-Pages-Adresse leitet GitHub auf die eigene Domain um — CNAME nicht entfernen.
+https://iryoof.github.io/iryogamecollection/
 
 Das Backend liegt getrennt auf Render (Frankfurt, Free-Tier) und wird **nicht** von
 dieser Action deployed. Die erlaubten Browser-Origins stehen in `server.ts` und in

@@ -81,11 +81,9 @@ export default function GameSetup({ socket, onNavigate, game }: GameSetupProps) 
     if (!lobbyCode || typeof window === 'undefined') return
     // Zwei Dinge, die hier falsch waren und den Link unbrauchbar gemacht haben:
     //
-    // Der Link muss das Vite-`base` mitnehmen. Seit die Seite unter iryo.bid
-    // in der Wurzel liegt, ist BASE_URL '/' — unter der alten Pages-Adresse war
-    // es '/iryogamecollection/'. `location.origin` allein war deshalb falsch,
-    // und ein hart verdrahteter Pfad wäre beim Domainwechsel wieder falsch
-    // geworden.
+    // `location.origin` ist auf GitHub Pages nur https://iryoof.github.io — die
+    // App liegt aber unter /iryogamecollection/. Deshalb BASE_URL, das Vite je
+    // nach Build auf '/' oder '/iryogamecollection/' setzt.
     //
     // Und ohne '#/cypher' landet der Eingeladene im Portal statt im Beitreten-
     // Formular: der Code wird erst gelesen, wenn CypherGame gemountet ist. Der
