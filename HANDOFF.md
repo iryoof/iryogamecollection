@@ -8,6 +8,95 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-10-23 — Eigene Domain iryo.bid
+
+### Gemacht
+
+`07c36d8` **Frontend von `iryoof.github.io/iryogamecollection/` auf `iryo.bid`
+umgestellt.** Vier Dateien tragen die Umstellung:
+
+- `frontend/public/CNAME` (neu), Inhalt `iryo.bid`. Vite kopiert `public/` nach
+  `dist/`, damit liegt die Datei im Pages-Artefakt.
+- `frontend/vite.config.ts`: `base` von `/iryogamecollection/` auf `/`.
+- `backend/src/server.ts`: `https://iryo.bid` und `https://www.iryo.bid` in
+  `DEFAULT_ALLOWED_ORIGINS`.
+- `render.yaml`: dieselben beiden Origins vorne in `FRONTEND_URL`.
+
+Dazu Doku: `DEPLOYMENT.md` (neuer Abschnitt „Eigene Domain“ mit DNS-Tabelle),
+`README.md`, `CLAUDE.md`, und der Kommentar in `GameSetup.tsx`, der noch die
+alte Pages-Adresse als Beispiel trug.
+
+### Warum so
+
+**`base: '/'` statt der alten Variante mit Repository-Namen.** Unter einer
+eigenen Domain liefert GitHub Pages die Seite aus der Wurzel aus, nicht mehr
+unter einem Repository-Pfad. Mit dem alten `base` hätte `iryo.bid/` auf
+`/iryogamecollection/assets/...` gezeigt — 404 für jedes Asset.
+
+**Nichts hart verdrahtet.** Der einzige Ort im Code, der den Pfad braucht, ist
+der Einladungslink in `GameSetup.tsx`, und der liest seit `41562a6`
+`import.meta.env.BASE_URL`. Der Domainwechsel zieht dort ohne Codeänderung
+durch. Verworfen: die Origins per Umgebungsvariable zu konfigurieren statt in
+`DEFAULT_ALLOWED_ORIGINS` — die Begründung im Code gilt weiter, ein fehlendes
+`FRONTEND_URL` darf die Seite nicht abschalten.
+
+**`iryoof.github.io` bleibt in der Allowlist.** GitHub leitet die alte Adresse
+nach dem Setzen der Custom Domain um; solange das nicht nachgewiesen ist, kostet
+der Eintrag nichts und verhindert einen CORS-Ausfall.
+
+**www zusätzlich zum Apex.** Welche der beiden Varianten David in der
+Registrar-Verwaltung setzt, ist hier nicht entschieden. Beide erlaubt heisst:
+keine zweite Runde am Backend.
+
+### Geprüft
+
+- `npm run type-check`: Frontend und Backend, `tsc --noEmit`, keine Ausgabe.
+- `npm run build`: 179 Module, `✓ built in 14.85s`; Backend-Bundle
+  `dist\server.js  97.7kb`.
+- `frontend/dist/CNAME` vorhanden, Inhalt `iryo.bid`.
+- `frontend/dist/index.html` verweist auf `/assets/index-CIyyiF3G.js` und
+  `/assets/index-DK_BGeDB.css` — Wurzelpfade, kein `/iryogamecollection/`.
+- Committete CNAME-Bytes per `od -c`: `i r y o . b i d 
+`, 9 Byte, kein CRLF.
+  Git warnte beim `add` vor LF→CRLF in der Arbeitskopie; im Blob steht LF, und
+  der Linux-Runner checkt LF aus.
+- `backend/dist/server.js` enthält nach dem Build `"https://iryo.bid"` und
+  `"https://www.iryo.bid"`.
+- Push: `6dbb917..07c36d8  main -> main`.
+
+**Nicht geprüft:** ob `https://iryo.bid` ausliefert. Das kann es noch nicht —
+DNS und die Pages-Einstellung fehlen (siehe Offen). Ebenso nicht geprüft, ob
+die alte Adresse danach umleitet, und ob Render die neue Allowlist gezogen hat.
+
+### Offen
+
+1. **DNS bei der Registrar-Verwaltung von `iryo.bid`.** A auf `185.199.108.153`,
+   `185.199.109.153`, `185.199.110.153`, `185.199.111.153`; AAAA auf
+   `2606:50c0:8000::153` bis `2606:50c0:8003::153`; `www` als CNAME auf
+   `iryoof.github.io.`. Tabelle steht in `DEPLOYMENT.md`.
+2. **Repository-Einstellungen → Pages → Custom domain = `iryo.bid`.** Bei
+   einem Deploy über GitHub Actions wertet GitHub nur dieses Feld aus; die
+   CNAME-Datei im Artefakt allein genügt nicht. Danach *Enforce HTTPS*, sobald
+   das Zertifikat ausgestellt ist (dauert nach dem DNS-Eintrag bis zu einer
+   Stunde).
+3. **Render neu deployen**, damit `FRONTEND_URL` aus `render.yaml` greift. Ohne
+   das zählt nur `DEFAULT_ALLOWED_ORIGINS` aus dem Code — das deckt iryo.bid
+   bereits ab, aber erst nach einem Backend-Deploy.
+4. `frontend/dist/index.html` verlinkt `/vite.svg`, die Datei liegt nicht in
+   `frontend/public/`. Der 404 ist älter als diese Änderung (vorher
+   `/iryogamecollection/vite.svg`), fällt unter der eigenen Domain aber eher
+   auf.
+
+### Fallstricke
+
+- Die Custom Domain muss in den Repository-Einstellungen stehen. Bei
+  Branch-Deploys reichte früher die CNAME-Datei; mit `actions/deploy-pages`
+  nicht mehr.
+- `backend/dist/` ist gitignoriert. Der Grep-Treffer in `backend/dist/server.js`
+  ist lokaler Build-Output, keine Quelle — nicht dort editieren.
+
+---
+
 ## 2026-09-28 (später) — Rauswurf aus der Lobby und „Lobby not found"
 
 ### Gemacht
