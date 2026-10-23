@@ -8,6 +8,90 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-10-23 (später) — Umstellung auf iryo.bid zurückgenommen
+
+### Gemacht
+
+`acecf6d` **Rollback von `07c36d8`** auf Davids Anweisung „machs rückgängig“,
+nachdem der Eintrag darunter gemeldet hatte, dass die Seite bis zum
+DNS-Eintrag offline ist.
+
+Zurückgenommen wurde:
+
+- `frontend/public/CNAME` gelöscht.
+- `frontend/vite.config.ts`: `base` wieder `/iryogamecollection/`.
+- `backend/src/server.ts`: `iryo.bid` und `www.iryo.bid` raus aus
+  `DEFAULT_ALLOWED_ORIGINS`.
+- `render.yaml`: `FRONTEND_URL` wieder
+  `https://iryoof.github.io,http://localhost:5173`.
+- `CLAUDE.md`, `README.md`, `DEPLOYMENT.md`, Kommentar in `GameSetup.tsx`:
+  Stand von `6dbb917`.
+
+### Warum so
+
+**Per `git checkout 6dbb917 -- <dateien>`, nicht per `git revert`.** Zwei der
+drei Commits (`a70ef85`, `3904ef5`) waren HANDOFF- und Doku-Nachträge; ein
+`revert` hätte die Einträge zur Umstellung mitgelöscht. Die sind aber genau
+das, was ein zweiter Versuch braucht — vor allem die Reihenfolge-Falle. Also
+Code und Config zurück, HANDOFF-Historie behalten.
+
+**`DEPLOYMENT.md` ist damit auch wieder auf dem alten Stand** — die DNS-Tabelle
+und der Abschnitt „Eigene Domain“ sind weg. Sie stehen in der Antwort an David
+und im Eintrag darunter; wer die Umstellung erneut angeht, holt sie aus
+`07c36d8` und `3904ef5` zurück.
+
+### Geprüft
+
+- `npm run type-check`: `tsc --noEmit` Frontend und Backend, keine Ausgabe.
+- `npm run build`: Backend-Bundle `dist\server.js  97.6kb`, Frontend ohne
+  Fehler.
+- `frontend/dist/` enthält **kein** `CNAME` mehr.
+- `frontend/dist/index.html` verweist auf
+  `/iryogamecollection/assets/index-DzFq3WrE.js` und
+  `/iryogamecollection/assets/index-DK_BGeDB.css` — wieder der Repository-Pfad.
+- Push `3904ef5..acecf6d`, Pages-Action `acecf6d`: `completed success`.
+
+### Offen — die Seite ist weiter offline
+
+**Das Rollback im Repo reicht nicht.** Die Custom Domain hängt an der
+Pages-*Einstellung* des Repositories, nicht an der CNAME-Datei. Nach dem
+Rollback-Deploy zeigt `gh api repos/iryoof/iryogamecollection/pages` weiter
+`cname=iryo.bid`, und `https://iryoof.github.io/iryogamecollection/` antwortet
+weiter mit **301 nach `http://iryo.bid/`**. Das Löschen der CNAME-Datei räumt
+die Einstellung also nicht mit ab — nur das Setzen hatte sie geschrieben.
+
+**Per API nicht zu beheben, Rechte fehlen.** `gh` ist als Account
+`Iryogameshows` angemeldet, `gh api repos/iryoof/iryogamecollection` meldet
+`admin: false` (nur `push`, `pull`, `triage`). `PUT .../pages` mit
+`{"cname":null}` läuft deshalb auf `404 Not Found` — fehlende
+Admin-Berechtigung, nicht ein falscher Endpunkt.
+
+**David muss das von Hand tun, als `iryoof`:** Settings → Pages → Custom
+domain → `iryo.bid` löschen und speichern. Danach prüfen:
+
+```bash
+curl -sSI https://iryoof.github.io/iryogamecollection/ | head -1
+```
+
+Erwartet `HTTP/2 200`, nicht `301`.
+
+Weiter offen:
+
+- `iryo.bid` ist gekauft und unbenutzt. Kein DNS-Eintrag gesetzt.
+- `/vite.svg` wird in `index.html` verlinkt und liegt nicht in
+  `frontend/public/` — 404, unabhängig von Domain und Rollback.
+
+### Fallstricke
+
+- Eine Custom Domain nimmt man nicht durch Löschen der CNAME-Datei zurück. Sie
+  bleibt in der Pages-Einstellung stehen und leitet weiter um.
+- Der lokale `gh`-Login gehört zu `Iryogameshows` und hat auf
+  `iryoof/iryogamecollection` kein Admin-Recht. Lesende API-Aufrufe gehen,
+  schreibende auf Repo-Einstellungen nicht — und die Fehlermeldung lautet
+  `404`, nicht `403`.
+
+---
+
 ## 2026-10-23 — Eigene Domain iryo.bid
 
 ### Gemacht
