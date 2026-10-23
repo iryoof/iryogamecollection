@@ -32,10 +32,16 @@ DNS bei der Registrar-Verwaltung von `iryo.bid`:
 | AAAA | `@` | `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153` |
 | CNAME | `www` | `iryoof.github.io.` |
 
-Dazu in den Repository-Einstellungen unter *Pages → Custom domain* `iryo.bid`
-eintragen und *Enforce HTTPS* setzen, sobald GitHub das Zertifikat ausgestellt
-hat. Die alte Adresse `iryoof.github.io/iryogamecollection/` leitet GitHub danach
-auf die eigene Domain um.
+GitHub liest die Domain aus der CNAME-Datei im Artefakt; das Feld unter
+*Settings → Pages → Custom domain* muss nicht von Hand gesetzt werden
+(nachgewiesen am 2026-10-23 über `gh api repos/.../pages`). *Enforce HTTPS*
+dagegen schon, sobald GitHub das Zertifikat ausgestellt hat — das passiert erst,
+wenn die Domain auflöst.
+
+**Reihenfolge:** erst die DNS-Einträge, dann die CNAME-Datei deployen. Sobald
+die Custom Domain gesetzt ist, leitet `iryoof.github.io/iryogamecollection/` mit
+301 auf die eigene Domain um und liefert selbst nichts mehr aus. Steht das DNS
+dann noch nicht, ist die Seite offline.
 
 Weil GitHub Pages keine SPA-Rewrites unterstützt, nutzt die App `HashRouter`;
 `frontend/public/404.html` fängt direkte Deep-Links ab.

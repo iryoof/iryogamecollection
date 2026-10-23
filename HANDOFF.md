@@ -64,34 +64,64 @@ keine zweite Runde am Backend.
   `"https://www.iryo.bid"`.
 - Push: `6dbb917..07c36d8  main -> main`.
 
-**Nicht geprüft:** ob `https://iryo.bid` ausliefert. Das kann es noch nicht —
-DNS und die Pages-Einstellung fehlen (siehe Offen). Ebenso nicht geprüft, ob
-die alte Adresse danach umleitet, und ob Render die neue Allowlist gezogen hat.
+Nach dem Push, mit `a70ef85` (HANDOFF-Nachtrag) als deployendem Commit:
+
+- Pages-Action `a70ef85`: `completed success`. Der Lauf zu `07c36d8` wurde von
+  der Concurrency-Gruppe abgebrochen — erwartet, `cancel-in-progress: true`.
+- `gh api repos/iryoof/iryogamecollection/pages`: `cname=iryo.bid`,
+  `status=built`, `html_url=http://iryo.bid/`, `https_enforced=false`. GitHub
+  hat die CNAME-Datei aus dem Artefakt also doch ausgewertet; das Feld in den
+  Einstellungen musste nicht von Hand gesetzt werden.
+- `curl https://iryoof.github.io/iryogamecollection/`: **301 nach
+  `http://iryo.bid/`**. Die alte Adresse liefert nichts mehr aus.
+- `curl -H "Origin: https://iryo.bid" .../health`: `HTTP/1.1 200`,
+  `access-control-allow-origin: https://iryo.bid`. Render hat den neuen Stand
+  schon gezogen. Mit `Origin: https://iryoof.github.io` ebenso 200 und passender
+  Header.
+- `nslookup -type=A iryo.bid 8.8.8.8`: **kein A-Record**. `curl http://iryo.bid/`
+  scheitert mit `curl: (6) Could not resolve host`.
+
+**Nicht geprüft:** ob die Seite unter der Domain korrekt rendert. Das geht erst
+nach dem DNS-Eintrag.
 
 ### Offen
 
+0. **Die Seite ist bis zum DNS-Eintrag offline.** Die alte Adresse leitet seit
+   diesem Deploy mit 301 auf `iryo.bid` um, und `iryo.bid` löst nicht auf. Kein
+   Zwischenzustand mit zwei erreichbaren Adressen — das war beim Setzen der
+   Custom Domain nicht vorhergesehen.
 1. **DNS bei der Registrar-Verwaltung von `iryo.bid`.** A auf `185.199.108.153`,
    `185.199.109.153`, `185.199.110.153`, `185.199.111.153`; AAAA auf
    `2606:50c0:8000::153` bis `2606:50c0:8003::153`; `www` als CNAME auf
    `iryoof.github.io.`. Tabelle steht in `DEPLOYMENT.md`.
-2. **Repository-Einstellungen → Pages → Custom domain = `iryo.bid`.** Bei
-   einem Deploy über GitHub Actions wertet GitHub nur dieses Feld aus; die
-   CNAME-Datei im Artefakt allein genügt nicht. Danach *Enforce HTTPS*, sobald
-   das Zertifikat ausgestellt ist (dauert nach dem DNS-Eintrag bis zu einer
-   Stunde).
-3. **Render neu deployen**, damit `FRONTEND_URL` aus `render.yaml` greift. Ohne
-   das zählt nur `DEFAULT_ALLOWED_ORIGINS` aus dem Code — das deckt iryo.bid
-   bereits ab, aber erst nach einem Backend-Deploy.
-4. `frontend/dist/index.html` verlinkt `/vite.svg`, die Datei liegt nicht in
+2. **Nach dem DNS-Eintrag *Enforce HTTPS* setzen** (Settings → Pages). GitHub
+   stellt das Zertifikat erst aus, wenn die Domain auflöst; danach steht die
+   Checkbox zur Verfügung. Die Custom Domain selbst ist bereits gesetzt (siehe
+   Geprüft), das Feld muss nicht angefasst werden.
+3. **Solange die Seite über `http://iryo.bid` läuft, blockiert CORS die
+   Mehrspieler-Spiele.** Die Allowlist enthält nur `https://iryo.bid`. Absicht:
+   ein `http`-Origin für die Live-Seite soll nicht dauerhaft erlaubt sein. Das
+   Fenster schliesst sich mit dem Zertifikat. Wer es überbrücken will, nimmt
+   `http://iryo.bid` befristet in `DEFAULT_ALLOWED_ORIGINS` auf.
+4. **`render.yaml` ist unbewiesen.** Die neue `FRONTEND_URL` ist dort
+   eingetragen, aber ob der Render-Service aus dem Blueprint liest oder die
+   Variable im Dashboard gepflegt wird, wurde nicht nachgesehen. Die Allowlist
+   greift derzeit über `DEFAULT_ALLOWED_ORIGINS` aus dem Code — das ist
+   nachgewiesen.
+5. `frontend/dist/index.html` verlinkt `/vite.svg`, die Datei liegt nicht in
    `frontend/public/`. Der 404 ist älter als diese Änderung (vorher
    `/iryogamecollection/vite.svg`), fällt unter der eigenen Domain aber eher
    auf.
 
 ### Fallstricke
 
-- Die Custom Domain muss in den Repository-Einstellungen stehen. Bei
-  Branch-Deploys reichte früher die CNAME-Datei; mit `actions/deploy-pages`
-  nicht mehr.
+- Vermutet war, dass `actions/deploy-pages` die CNAME-Datei im Artefakt
+  ignoriert und die Domain von Hand in den Einstellungen stehen muss. Die
+  Pages-API zeigt nach dem Deploy `cname=iryo.bid` — die Datei genügt. Die
+  Vermutung stand kurz in `DEPLOYMENT.md` und ist dort korrigiert.
+- Das Setzen der Custom Domain schaltet die alte Adresse sofort auf 301 um.
+  Reihenfolge also umgekehrt: erst DNS, dann CNAME-Datei deployen. Hier lief es
+  falsch herum, Kosten: Ausfall bis zum DNS-Eintrag.
 - `backend/dist/` ist gitignoriert. Der Grep-Treffer in `backend/dist/server.js`
   ist lokaler Build-Output, keine Quelle — nicht dort editieren.
 
