@@ -51,7 +51,41 @@ und im Eintrag darunter; wer die Umstellung erneut angeht, holt sie aus
   `/iryogamecollection/assets/index-DK_BGeDB.css` — wieder der Repository-Pfad.
 - Push `3904ef5..acecf6d`, Pages-Action `acecf6d`: `completed success`.
 
-### Offen — die Seite ist weiter offline
+### Nachtrag — Seite ist wieder online
+
+David hat `iryo.bid` unter *Settings → Pages → Custom domain* gelöscht.
+Danach meldete `gh api .../pages` `cname=null`, die alte Adresse antwortete
+aber **weiter mit 301** — auch mit `Cache-Control: no-cache` und
+Cache-Buster-Query, dreimal in Folge. Erst ein erzwungener Re-Deploy
+(`gh workflow run ghpages.yml --ref main`, Run `39912438146`,
+`completed success`) hat die Umleitung abgeräumt.
+
+Nachgewiesen danach:
+
+- `https://iryoof.github.io/iryogamecollection/?cb=…`: **HTTP 200**, keine
+  Umleitung.
+- Live-`index.html` verweist auf
+  `/iryogamecollection/assets/index-D-p_cjlL.js` (anderer Hash als der lokale
+  Build, der CI baut mit eigenem `npm install`) und
+  `/iryogamecollection/assets/index-DK_BGeDB.css`.
+- Hauptbundle: `200`, 247338 B. Spiel-Chunk `assets/CypherGame-_4ZSqu80.js`:
+  `200`, 41318 B.
+- Im Chunk steht der Einladungslink als
+  `${window.location.origin}/iryogamecollection/?code=…#/cypher`;
+  `grep -c "iryo\.bid"` auf den Chunk ergibt **0**.
+- `?code=TEST` auf der Startseite: `200`.
+- Backend: `Origin: https://iryoof.github.io` →
+  `access-control-allow-origin: https://iryoof.github.io`;
+  `Origin: https://iryo.bid` → **kein ACAO-Header**. Render hat das Rollback
+  gezogen.
+
+Weiter offen:
+
+- `iryo.bid` ist gekauft und unbenutzt. Kein DNS-Eintrag gesetzt.
+- `/vite.svg` wird in `index.html` verlinkt und liegt nicht in
+  `frontend/public/` — 404, unabhängig von Domain und Rollback.
+
+### Was das Rollback gekostet hat
 
 **Das Rollback im Repo reicht nicht.** Die Custom Domain hängt an der
 Pages-*Einstellung* des Repositories, nicht an der CNAME-Datei. Nach dem
@@ -66,25 +100,17 @@ die Einstellung also nicht mit ab — nur das Setzen hatte sie geschrieben.
 `{"cname":null}` läuft deshalb auf `404 Not Found` — fehlende
 Admin-Berechtigung, nicht ein falscher Endpunkt.
 
-**David muss das von Hand tun, als `iryoof`:** Settings → Pages → Custom
-domain → `iryo.bid` löschen und speichern. Danach prüfen:
-
-```bash
-curl -sSI https://iryoof.github.io/iryogamecollection/ | head -1
-```
-
-Erwartet `HTTP/2 200`, nicht `301`.
-
-Weiter offen:
-
-- `iryo.bid` ist gekauft und unbenutzt. Kein DNS-Eintrag gesetzt.
-- `/vite.svg` wird in `index.html` verlinkt und liegt nicht in
-  `frontend/public/` — 404, unabhängig von Domain und Rollback.
+**David hat es von Hand gelöscht** (Settings → Pages → Custom domain), siehe
+Nachtrag oben.
 
 ### Fallstricke
 
 - Eine Custom Domain nimmt man nicht durch Löschen der CNAME-Datei zurück. Sie
   bleibt in der Pages-Einstellung stehen und leitet weiter um.
+- Das Löschen der Custom Domain wirkt nicht sofort. `cname=null` in der API
+  und 301 an der Adresse bestanden gleichzeitig; erst ein Re-Deploy
+  (`gh workflow run ghpages.yml --ref main`) hat es aufgelöst. Ein
+  Cache-Buster half nicht — die Umleitung kam nicht aus einem HTTP-Cache.
 - Der lokale `gh`-Login gehört zu `Iryogameshows` und hat auf
   `iryoof/iryogamecollection` kein Admin-Recht. Lesende API-Aufrufe gehen,
   schreibende auf Repo-Einstellungen nicht — und die Fehlermeldung lautet
