@@ -34,8 +34,10 @@ const toOrigin = (value: string): string | null => {
 // environment variable cannot take the live site offline. FRONTEND_URL only
 // adds further origins on top.
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://iryoof.github.io', // GitHub Pages
-  'http://localhost:5173'     // Vite dev server
+  'https://iryo.bid',          // eigene Domain, Apex
+  'https://www.iryo.bid',      // eigene Domain, www
+  'https://iryoof.github.io',  // alte GitHub-Pages-Adresse
+  'http://localhost:5173'      // Vite dev server
 ]
 
 const allowedOrigins = Array.from(new Set([

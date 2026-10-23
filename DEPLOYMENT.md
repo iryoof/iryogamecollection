@@ -9,14 +9,33 @@ Läuft vollautomatisch. Jeder Push auf `main` startet den Workflow
 [`.github/workflows/ghpages.yml`](.github/workflows/ghpages.yml), der
 `node build.js` ausführt und `frontend/dist` als Pages-Artefakt veröffentlicht.
 
-Ergebnis: https://iryoof.github.io/iryogamecollection/
+Ergebnis: https://iryo.bid/
 
-Zwei Dinge hängen daran und dürfen nicht auseinanderlaufen:
+Drei Dinge hängen daran und dürfen nicht auseinanderlaufen:
 
-- `base: '/iryogamecollection/'` in `frontend/vite.config.ts` muss zum
-  Repository-Namen passen.
+- `frontend/public/CNAME` enthält `iryo.bid`. Vite kopiert `public/` nach
+  `dist/`, damit landet die Datei im Pages-Artefakt. Fällt sie weg, fällt die
+  Seite auf die alte Pages-Adresse zurück.
+- `base: '/'` in `frontend/vite.config.ts`, weil die Seite unter der eigenen
+  Domain in der Wurzel liegt. Vor dem Domainwechsel stand hier
+  `/iryogamecollection/`, der Repository-Name.
 - `VITE_BACKEND_URL` wird im Workflow gesetzt (nicht aus `.env.production`
   gelesen) und muss auf die Render-URL zeigen.
+
+### Eigene Domain
+
+DNS bei der Registrar-Verwaltung von `iryo.bid`:
+
+| Typ | Name | Wert |
+| --- | --- | --- |
+| A | `@` | `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153` |
+| AAAA | `@` | `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153` |
+| CNAME | `www` | `iryoof.github.io.` |
+
+Dazu in den Repository-Einstellungen unter *Pages → Custom domain* `iryo.bid`
+eintragen und *Enforce HTTPS* setzen, sobald GitHub das Zertifikat ausgestellt
+hat. Die alte Adresse `iryoof.github.io/iryogamecollection/` leitet GitHub danach
+auf die eigene Domain um.
 
 Weil GitHub Pages keine SPA-Rewrites unterstützt, nutzt die App `HashRouter`;
 `frontend/public/404.html` fängt direkte Deep-Links ab.
@@ -49,13 +68,17 @@ Aktueller Service: `https://cypher-backend-ume8.onrender.com`
 | `FRONTEND_URL` | Komma-getrennte Liste erlaubter Browser-Origins |
 
 `FRONTEND_URL` ist die CORS-Allowlist. Einträge sind **Origins**, keine URLs mit
-Pfad — also `https://iryoof.github.io`, nicht
-`https://iryoof.github.io/iryogamecollection`. Mehrere Einträge werden mit Komma
-getrennt, damit z. B. ein lokaler Dev-Server gegen das Prod-Backend testen kann:
+Pfad — also `https://iryo.bid`, nicht `https://iryo.bid/cypher`. Mehrere
+Einträge werden mit Komma getrennt, damit z. B. ein lokaler Dev-Server gegen das
+Prod-Backend testen kann:
 
 ```
-FRONTEND_URL=https://iryoof.github.io,http://localhost:5173
+FRONTEND_URL=https://iryo.bid,https://www.iryo.bid,https://iryoof.github.io,http://localhost:5173
 ```
+
+Dieselben Origins stehen zusätzlich als `DEFAULT_ALLOWED_ORIGINS` in
+`backend/src/server.ts`, damit ein fehlendes `FRONTEND_URL` die Seite nicht
+abschaltet.
 
 ## Nach dem Deploy
 

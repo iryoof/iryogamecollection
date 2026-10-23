@@ -3,7 +3,7 @@
 Eine Sammlung mobiler Multiplayer-Partyspiele im Browser. Ein gemeinsames Portal,
 drei Spiele, ein Echtzeit-Backend.
 
-**Live:** https://iryoof.github.io/iryogamecollection/
+**Live:** https://iryo.bid/
 
 ## Die Spiele
 

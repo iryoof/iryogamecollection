@@ -11,9 +11,10 @@ services:
       - key: NODE_ENV
         value: production
       # Comma-separated list of allowed browser origins (no trailing slash, no path).
-      # First entry is the live GitHub Pages site, second is the local Vite dev server.
+      # iryo.bid is the live site, iryoof.github.io the old Pages address that
+      # still redirects there, localhost:5173 the local Vite dev server.
       - key: FRONTEND_URL
-        value: https://iryoof.github.io,http://localhost:5173
+        value: https://iryo.bid,https://www.iryo.bid,https://iryoof.github.io,http://localhost:5173
 
 # No database: all lobby/game state is kept in memory in the backend process,
 # archives are written to the local filesystem by saveManager.ts.
