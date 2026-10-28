@@ -107,11 +107,27 @@ export default function GamePortal() {
             </div>
           </Link>
 
+          <Link
+            to="/ultimate"
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-stone-500/20 to-zinc-600/20 border border-stone-400/30 hover:border-stone-300/60 transition-all duration-300 p-8 text-left hover:scale-105 hover:shadow-2xl hover:shadow-stone-500/20 no-underline"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-stone-400/10 to-zinc-500/10 group-hover:from-stone-400/20 group-hover:to-zinc-500/20 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="text-5xl mb-4">📰</div>
+              <h2 className="text-3xl font-bold mb-2 text-white">{t('ticTacToeUltimate')}</h2>
+              <p className="text-white/80 mb-4">{t('strategyGame')}</p>
+              <p className="text-sm text-white/60">{t('ticTacToeUltimateDescription')}</p>
+              <div className="mt-6 inline-block px-4 py-2 bg-stone-400/30 rounded-lg text-sm text-stone-200 group-hover:bg-stone-400/50 transition-colors">
+                {t('play')}
+              </div>
+            </div>
+          </Link>
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-            <div className="text-2xl font-bold text-purple-400">5</div>
+            <div className="text-2xl font-bold text-purple-400">6</div>
             <p className="text-white/60 text-sm mt-1">{t('gamesAvailable')}</p>
           </div>
           <div className="p-4 rounded-lg bg-white/5 border border-white/10">

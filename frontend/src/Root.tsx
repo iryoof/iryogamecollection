@@ -3,7 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import GamePortal from './pages/GamePortal'
 
 // Die Spiele werden nachgeladen statt mitgeliefert. Das Portal ist die erste
-// Seite, die jeder sieht, und es soll nicht den Ballast aller fünf Spiele
+// Seite, die jeder sieht, und es soll nicht den Ballast aller sechs Spiele
 // tragen — beim Schwedenrätsel ist das inzwischen ein fünfstelliger Wortpool,
 // den nur braucht, wer das Rätsel auch öffnet.
 const CypherGame = lazy(() => import('./pages/CypherGame'))
@@ -11,6 +11,7 @@ const WerBinIchGame = lazy(() => import('./pages/WerBinIchGame'))
 const WavelengthGame = lazy(() => import('./pages/WavelengthGame'))
 const SchwedenraetselGame = lazy(() => import('./pages/SchwedenraetselGame'))
 const PokemonQuizGame = lazy(() => import('./pages/PokemonQuizGame'))
+const UltimateGame = lazy(() => import('./pages/UltimateGame'))
 
 function Loading() {
   return (
@@ -34,6 +35,7 @@ export default function Root() {
           <Route path="/wavelength/*" element={<WavelengthGame />} />
           <Route path="/schwedenraetsel/*" element={<SchwedenraetselGame />} />
           <Route path="/pokemonquiz/*" element={<PokemonQuizGame />} />
+          <Route path="/ultimate/*" element={<UltimateGame />} />
           {/* Legacy misspelled path, kept so older links keep working. */}
           <Route path="/wavvelength/*" element={<Navigate to="/wavelength" replace />} />
           {/* The puzzle used to be a numbered crossword and lived here. */}

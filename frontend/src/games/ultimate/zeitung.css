@@ -1,0 +1,434 @@
+/*
+ * Eigene Optik fuer "TikTacToe Ultimate": Raetselseite einer Tageszeitung.
+ *
+ * Bewusst abweichend vom Rest der Sammlung. Die anderen Spiele nutzen die
+ * Tokens aus globals.css — dunkel, Verlaeufe, abgerundet. Hier ist nichts
+ * davon: Papier, Tinte, rechte Winkel, durchgezogene Linien, keine einzige
+ * Farbverlaufsflaeche.
+ *
+ * Alle Klassen tragen das Praefix zt-, damit nichts in die anderen Spiele
+ * ausblutet. globals.css bleibt unberuehrt.
+ */
+
+:root {
+  --zt-paper: #e9e3d6;
+  --zt-paper-deep: #ded7c7;
+  --zt-ink: #16140f;
+  --zt-ink-soft: rgba(22, 20, 15, 0.58);
+  --zt-ink-faint: rgba(22, 20, 15, 0.14);
+  --zt-serif: Georgia, 'Times New Roman', 'Liberation Serif', serif;
+  --zt-hard: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --zt-mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
+}
+
+/*
+ * globals.css legt auf body einen dunklen Verlauf und zwei fixierte Overlays
+ * (body::before / body::after). Die liegen ueber der ganzen Seite und wuerden
+ * das Papier eingrauen, deshalb hier abgeschaltet statt uebermalt.
+ */
+body.zt-body {
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  font-family: var(--zt-serif);
+  letter-spacing: normal;
+}
+
+body.zt-body::before,
+body.zt-body::after {
+  display: none;
+}
+
+/*
+ * globals.css setzt html, body und #root auf height: 100% — feste Hoehe, nicht
+ * Mindesthoehe. Eine Seite, die laenger wird als das Fenster, laeuft damit aus
+ * ihrem Kasten heraus und legt sich ueber den Text darunter. Zwei Gitter
+ * nebeneinander werden schnell laenger.
+ */
+html:has(body.zt-body),
+body.zt-body,
+body.zt-body #root {
+  height: auto;
+  min-height: 100%;
+}
+
+.zt-page {
+  min-height: 100%;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  justify-content: center;
+}
+
+.zt-sheet {
+  width: 100%;
+  max-width: 68rem;
+}
+
+/* --- Kopf ---------------------------------------------------------------- */
+
+.zt-masthead {
+  border-top: 1px solid var(--zt-ink);
+  border-bottom: 4px solid var(--zt-ink);
+  padding: 0.5rem 0 0.75rem;
+  text-align: center;
+}
+
+.zt-masthead-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-family: var(--zt-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--zt-ink-soft);
+  padding-bottom: 0.4rem;
+}
+
+.zt-title {
+  font-family: var(--zt-serif);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.015em;
+  margin: 0.2rem 0;
+  font-size: clamp(2.1rem, 7vw, 4rem);
+}
+
+.zt-subtitle {
+  font-family: var(--zt-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--zt-ink-soft);
+}
+
+.zt-kicker {
+  font-family: var(--zt-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--zt-ink-soft);
+}
+
+.zt-heading {
+  font-family: var(--zt-serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* --- Linien und Kaesten --------------------------------------------------- */
+
+.zt-rule {
+  border: 0;
+  border-top: 1px solid var(--zt-ink);
+  margin: 0.9rem 0;
+}
+
+.zt-rule-hair {
+  border: 0;
+  border-top: 1px solid var(--zt-ink-faint);
+  margin: 0.7rem 0;
+}
+
+.zt-box {
+  border: 1px solid var(--zt-ink);
+  padding: 1rem 1.1rem;
+}
+
+.zt-box-head {
+  border-bottom: 2px solid var(--zt-ink);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.zt-columns {
+  column-count: 2;
+  column-gap: 1.6rem;
+  column-rule: 1px solid var(--zt-ink-faint);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .zt-columns { column-count: 1; }
+}
+
+.zt-columns p { margin: 0 0 0.7rem; break-inside: avoid; }
+
+/* --- Bedienelemente ------------------------------------------------------- */
+
+.zt-btn {
+  display: inline-block;
+  width: 100%;
+  border: 1px solid var(--zt-ink);
+  background: transparent;
+  color: var(--zt-ink);
+  font-family: var(--zt-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.zt-btn:hover:not(:disabled) {
+  background: var(--zt-ink);
+  color: var(--zt-paper);
+}
+
+.zt-btn:disabled {
+  color: var(--zt-ink-soft);
+  border-color: var(--zt-ink-faint);
+  cursor: not-allowed;
+}
+
+.zt-btn--solid {
+  background: var(--zt-ink);
+  color: var(--zt-paper);
+}
+
+/*
+ * Gefuellte Buttons kehren sich beim Ueberfahren *nicht* um. Sie markieren den
+ * aktiven Modus, und der verschwand sonst genau dann, wenn man mit der Maus
+ * darauf steht — also direkt nach dem Klick.
+ */
+.zt-btn--solid:hover:not(:disabled) {
+  background: #353026;
+  color: var(--zt-paper);
+}
+
+.zt-btn--inline {
+  width: auto;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.64rem;
+}
+
+/*
+ * input.zt-input, nicht nur .zt-input: globals.css stylt input[type='text']
+ * mit Spezifitaet (0,1,1) und schlaegt damit eine blosse Klasse. Mit dem
+ * Elementnamen davor sind beide gleich stark, und diese Datei wird spaeter
+ * geladen.
+ */
+input.zt-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--zt-ink);
+  background: transparent;
+  color: var(--zt-ink);
+  font-family: var(--zt-serif);
+  font-size: 1.1rem;
+  padding: 0.45rem 0.1rem;
+  border-radius: 0;
+  outline: none;
+}
+
+input.zt-input::placeholder { color: var(--zt-ink-faint); }
+
+input.zt-input:focus {
+  border: 0;
+  border-bottom: 2px solid var(--zt-ink);
+  background: rgba(22, 20, 15, 0.05);
+  box-shadow: none;
+}
+
+input.zt-input--code {
+  font-family: var(--zt-mono);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+
+/* --- Tabellen ------------------------------------------------------------- */
+
+.zt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--zt-mono);
+  font-size: 0.78rem;
+}
+
+.zt-table th {
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--zt-ink-soft);
+  border-bottom: 1px solid var(--zt-ink);
+  padding: 0.3rem 0.5rem 0.3rem 0;
+}
+
+.zt-table td {
+  border-bottom: 1px solid var(--zt-ink-faint);
+  padding: 0.45rem 0.5rem 0.45rem 0;
+  vertical-align: middle;
+}
+
+.zt-table td:last-child, .zt-table th:last-child { padding-right: 0; text-align: right; }
+
+/* --- Hinweisbalken -------------------------------------------------------- */
+
+.zt-banner {
+  background: var(--zt-ink);
+  color: var(--zt-paper);
+  font-family: var(--zt-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 0.6rem 0.9rem;
+}
+
+.zt-note {
+  border-left: 3px solid var(--zt-ink);
+  padding-left: 0.8rem;
+  font-size: 0.86rem;
+  color: var(--zt-ink-soft);
+}
+
+/* --- Brett ---------------------------------------------------------------- */
+
+/*
+ * min-width: 0 ist hier kein Detail, sondern noetig: Grid-Spalten haben
+ * voreingestellt min-width: auto und koennen damit nicht unter die
+ * Inhaltsbreite schrumpfen. Ohne das lief das rechte Gitter ueber den
+ * Seitenrand und die unterste Zeile legte sich ueber den Text darunter.
+ */
+.zt-board-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.zt-board-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--zt-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  border-bottom: 1px solid var(--zt-ink);
+  padding-bottom: 0.3rem;
+}
+
+/*
+ * Die Gitterlinien entstehen aus den Luecken: der Hintergrund ist Tinte, die
+ * Felder liegen als Papier darauf. 3px zwischen den Unterfeldern, 1px zwischen
+ * den Zellen — genau die Abstufung eines gedruckten Raetselgitters.
+ */
+.zt-board {
+  width: 100%;
+  display: grid;
+  /*
+   * minmax(0, 1fr), nicht 1fr: 1fr heisst minmax(auto, 1fr), und das auto
+   * verhindert, dass eine Spur unter die Mindestbreite ihres Inhalts
+   * schrumpft. Solange die Zellen leer sind, faellt das nicht auf — sobald
+   * Zeichen drinstehen, wachsen die Spuren mit und das Gitter laeuft aus
+   * seinem Kasten heraus.
+   */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  background: var(--zt-ink);
+  border: 3px solid var(--zt-ink);
+}
+
+.zt-sub {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--zt-ink-faint);
+  min-width: 0;
+}
+
+/*
+ * Die Umrandung des vorgegebenen Felds liegt als eigene Ebene ueber den
+ * Zellen. Als box-shadow auf dem Unterfeld selbst war sie unsichtbar: die
+ * Zellen sind deckend in Papierfarbe gefuellt und liegen darueber, uebrig
+ * blieb ein Schimmer in den Fugen.
+ *
+ * Das ::before ist absolut positioniert und damit kein Rasterfeld — sonst
+ * haette es als zehntes Kind das 3x3-Raster gesprengt.
+ */
+.zt-sub--forced::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 3px var(--zt-ink);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.zt-cell {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  background: var(--zt-paper);
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--zt-hard);
+  font-weight: 700;
+  font-size: clamp(0.7rem, 2.1vw, 1.25rem);
+  line-height: 1;
+  color: var(--zt-ink);
+  border-radius: 0;
+}
+
+.zt-cell--legal { cursor: pointer; }
+
+/* Kleines Quadrat zeigt an, wo gesetzt werden darf — ohne Farbe, ohne Glanz. */
+.zt-cell--legal::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: var(--zt-ink-faint);
+}
+
+.zt-cell--legal:hover { background: var(--zt-paper-deep); }
+.zt-cell--legal:hover::after { background: var(--zt-ink-soft); }
+
+/* Die Zeichen bleiben sichtbar, treten aber weit zurueck — sonst kaempfen sie
+ * mit dem Stempel darueber um dieselbe Flaeche. */
+.zt-sub--decided .zt-cell { color: rgba(22, 20, 15, 0.22); background: var(--zt-paper-deep); }
+
+/* Grosses Zeichen ueber einem entschiedenen Unterfeld, wie ein Stempel. */
+.zt-sub-stamp {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--zt-hard);
+  font-weight: 700;
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  color: var(--zt-ink);
+  pointer-events: none;
+}
+
+.zt-sub-stamp--draw { font-size: clamp(0.6rem, 1.8vw, 0.9rem); font-family: var(--zt-mono); letter-spacing: 0.1em; }
+
+.zt-boards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: start;
+}
+
+/* Ein einzelnes Gitter soll die Seite nicht in voller Breite fuellen. */
+.zt-boards:not(.zt-boards--two) .zt-board-wrap {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .zt-boards--two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

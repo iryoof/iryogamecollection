@@ -50,5 +50,8 @@
   "soloPuzzle": "Rätsel für alleine",
   "arrowWordsDescription": "Fragen stehen im Gitter, jedes Rätsel neu gewürfelt",
   "pokemonQuiz": "Pokémon-Quiz",
-  "pokemonQuizDescription": "Errate Generation und genaue Pokédex-Nummer zu jedem Pokémon"
+  "pokemonQuizDescription": "Errate Generation und genaue Pokédex-Nummer zu jedem Pokémon",
+  "ticTacToeUltimate": "TikTacToe Ultimate",
+  "strategyGame": "Strategie zu zweit oder zu viert",
+  "ticTacToeUltimateDescription": "Neun Gitter in einem – dein Zug bestimmt, wo der Gegner setzen muss"
 }

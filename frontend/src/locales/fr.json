@@ -50,5 +50,8 @@
   "soloPuzzle": "Jeu en solo",
   "arrowWordsDescription": "Les définitions sont dans la grille, une grille inédite",
   "pokemonQuiz": "Quiz Pokémon",
-  "pokemonQuizDescription": "Devine la génération et le numéro exact du Pokédex pour chaque Pokémon"
+  "pokemonQuizDescription": "Devine la génération et le numéro exact du Pokédex pour chaque Pokémon",
+  "ticTacToeUltimate": "TikTacToe Ultimate",
+  "strategyGame": "Stratégie à deux ou à quatre",
+  "ticTacToeUltimateDescription": "Neuf grilles en une – votre coup impose où l’adversaire doit jouer"
 }

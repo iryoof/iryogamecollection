@@ -6,6 +6,7 @@ import { GameManager } from './game/GameManager'
 import { setupSocketHandlers } from './io'
 import { setupWerBinIchSocketHandlers } from './werbinich'
 import { setupWavelengthSocketHandlers } from './wavelength'
+import { setupUltimateSocketHandlers } from './ultimate'
 import { listSaves, saveGame, loadSave, deleteSave } from './saveManager'
 import dotenv from 'dotenv'
 
@@ -103,6 +104,7 @@ app.get('/api/stats', (req: Request, res: Response) => {
 setupSocketHandlers(io, gameManager)
 setupWerBinIchSocketHandlers(io)
 setupWavelengthSocketHandlers(io)
+setupUltimateSocketHandlers(io)
 
 // Error handling â€” must be the last middleware. Express only treats this as
 // an error handler when the function has exactly 4 parameters; with 3, it is
