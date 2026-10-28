@@ -8,6 +8,135 @@ Stand trotzdem `git fetch origin` und im Repo nachsehen.
 
 ---
 
+## 2026-10-28 — Neues Spiel: TikTacToe Ultimate (1v1 und 2v2)
+
+### Gemacht
+
+`ad4d2de` **Ultimate Tic-Tac-Toe als sechstes Spiel**, online über Socket.IO,
+Route `/ultimate`, Event-Präfix `ttt:`.
+
+Neu: `backend/src/game/UltimateEngine.ts` (Brettregeln), `UltimateMatch.ts`
+(Sitzordnung, Rundentakt, Wertung), `UltimateLobby.ts`, `UltimateGameManager.ts`,
+`backend/src/ultimate.ts` (Socket-Handler), `frontend/src/games/ultimate/`
+(inkl. eigener `zeitung.css`), `frontend/src/pages/UltimateGame.tsx`,
+`scripts/check-ultimate.mjs`, `scripts/check-ultimate-socket.mjs`.
+Geändert: `server.ts` (eine Registrierungszeile), `Root.tsx`, `GamePortal.tsx`,
+`locales/de|en|fr.json`.
+
+### Regeln, wie David sie festgelegt hat
+
+Nachgefragt und bestätigt am 2026-10-28, weil seine erste Beschreibung sich an
+einer Stelle widersprach (er schrieb „A und C sind X", nannte C zwei Sätze
+später aber den Kreis-Spieler):
+
+- Zelle gibt das nächste Unterfeld vor. Ist es entschieden → **freie Wahl**.
+- Unterfeld gewonnen **1 Punkt**, voll ohne Sieger **0**, drei Unterfelder in
+  einer Reihe **3 Punkte** und das Gitter ist **sofort vorbei** — restliche
+  Unterfelder bleiben ungespielt.
+- 1v1: ein Gitter. 2v2: zwei Gitter, Team X = Plätze A+B, Team O = C+D.
+- Gleichschritt: eine Runde endet erst, wenn **beide** Gitter ihr Zugpaar
+  hatten. Danach tauschen die Paare die Seite.
+- Ist ein Gitter fertig, spielen alle vier am verbliebenen weiter.
+
+### Warum so
+
+**Die Sitzrotation ist eine Formel, keine eigene Mechanik.** An Gitter `b` sitzt
+in Runde `r` das Teammitglied mit Index `(r + b) % Teamgröße`. Dadurch bleibt
+jedes Gitter ein ganz normales Ultimate-Spiel, die Brettlogik kennt den
+2v2-Modus überhaupt nicht, und im 1v1 fällt die Rotation von allein weg, weil
+ein Team dort nur ein Mitglied hat. Der Alternativentwurf — Tausch als eigener
+Vorgang mit Zustand — hätte denselben Effekt mit mehr beweglichen Teilen gehabt.
+
+**Engine im Backend, nicht in `shared/`.** Verworfen, weil `shared/types.ts`
+heute ausschließlich Typen enthält, die beim Bauen verschwinden. Dass das
+Frontend von dort auch *lauffähigen* Code bündeln kann, ist im Repo nirgends
+belegt. Stattdessen: der Server rechnet die erlaubten Züge aus und schickt sie
+im Zustand mit. Das Frontend baut die Regeln dadurch nicht ein zweites Mal nach
+und kann auch nicht von ihnen abweichen.
+
+**`shared/types.ts` bewusst nicht angefasst.** Wavelength, das jüngste
+Mehrspieler-Spiel, legt seine Typen neben die Lobby und spiegelt sie im
+Frontend. Der jüngeren Konvention gefolgt statt der älteren.
+
+**Ein Broadcast statt Zuschnitt pro Spieler.** Anders als Wavelength hat dieses
+Spiel keine verdeckte Information — alle sehen dasselbe Brett. Der Broadcast
+enthält aber **keine `reconnectKey`s**; die gehen nur im Ack an den jeweiligen
+Spieler.
+
+**Eigene Optik.** Auf Davids Ansage („kein Gradient, keine Pill-Buttons")
+gestaltet als Rätselseite einer Tageszeitung, gekapselt in
+`games/ultimate/zeitung.css` mit Präfix `zt-`. `globals.css` bleibt unberührt;
+die Datei schaltet die dortigen `body`-Overlays nur für diese Seite ab.
+
+### Geprüft
+
+- `scripts/check-ultimate.mjs`: **61 Prüfungen**, alle bestanden. Deckt
+  Unterfeld-Zwang, freie Wahl, sofortiges Brettende, Wertung 1/3/0,
+  Sitzrotation über drei Runden, fertiges Gitter, Partieende nach Punkten
+  inklusive Unentschieden und alle fünf Fehlerfälle beim Zug ab.
+- `scripts/check-ultimate-socket.mjs`: **38 Prüfungen** über echte Sockets
+  gegen einen selbst gestarteten Server auf Port 3101, alle bestanden. Deckt
+  Lobby anlegen/beitreten, Platzvergabe, Moduswechsel, Gleichschritt über zwei
+  Gitter inklusive Seitentausch, Reconnect mit Platzerhalt und Auflösen ab.
+  Prüft ausdrücklich, dass kein fremder `reconnectKey` im Broadcast landet.
+- `npm run type-check`: Frontend und Backend ohne Ausgabe, Exit 0.
+- `npm run build`: Exit 0. Frontend-Chunk `UltimateGame` 15,78 kB (gzip 4,96)
+  plus 6,05 kB CSS, beides nachgeladen. Backend-Bundle 97,6 kB → 128,2 kB.
+- Im Browser mit Playwright durchgespielt: Menü, Lobby, 2v2 mit vier Clients
+  über 17 Runden, 1v1, Mobilbreite 420 px.
+
+### Fallstricke, die Zeit gekostet haben
+
+1. **`repeat(3, 1fr)` ist `minmax(auto, 1fr)`.** Eine Rasterspur kann damit
+   nicht unter die Mindestbreite ihres Inhalts schrumpfen. Bei leeren Zellen
+   fällt das nicht auf — sobald Zeichen drinstanden, wuchsen die Unterfelder
+   auf 179 und 186 px statt gleichmäßig 173, und das Gitter lief aus seinem
+   Kasten. **Nur im bespielten Zustand sichtbar**, eine Messung im leeren
+   Zustand meldet „alles korrekt". Nötig ist `minmax(0, 1fr)` auf *allen*
+   Ebenen: `.zt-boards`, `.zt-board` und `.zt-sub`.
+2. **`box-shadow: inset` auf dem Unterfeld war unsichtbar.** Die Zellen liegen
+   deckend in Papierfarbe darüber, übrig blieb ein Schimmer in den 1px-Fugen.
+   Die Markierung des vorgegebenen Felds ist jetzt ein absolut positioniertes
+   `::before` mit `z-index`.
+3. **`globals.css` schlägt Klassen.** `input[type='text']` hat Spezifität
+   (0,1,1) und gewinnt gegen `.zt-input` (0,1,0). Lösung: `input.zt-input`.
+4. **`html, body, #root { height: 100% }` in `globals.css` ist eine feste
+   Höhe**, keine Mindesthöhe. Eine Seite, die länger wird als das Fenster,
+   läuft aus ihrem Kasten. Für die Zeitungsseite eigens überschrieben.
+5. **Prüfskript: `npx tsx` zu killen beendet nur den Wrapper.** Der eigentliche
+   Node-Prozess lief weiter und blockierte Port 3101 beim nächsten Lauf mit
+   `EADDRINUSE`. Gelöst über `detached: true` und `process.kill(-pid)`.
+6. **Lokale Browsertests brauchen drei Dinge**, sonst verbindet die Seite nicht:
+   Vite liefert unter `/iryogamecollection/`; die CORS-Allowlist in `server.ts`
+   kennt `http://localhost:5173`, **nicht** `127.0.0.1:5173` (zwei verschiedene
+   Origins); und `VITE_BACKEND_URL` zeigt über `.env.development` auf das
+   Render-Backend — die Datei, die das lokal übersteuert, heißt
+   `.env.development.local`, nicht `.env.local` (die hat niedrigere Priorität).
+7. **Playwrights `fullPage`-Aufnahme setzt die Seite falsch zusammen**, solange
+   `html` eine feste Höhe hat. Zweimal einen Überlapp gejagt, den es nicht gab.
+   Für Seitenaufnahmen lieber ein hohes Fenster als `fullPage`.
+
+### Offen
+
+- **Die Spielseite ist nur auf Deutsch.** Übersetzt sind nur die Portal-Karte
+  und die generischen Schlüssel (`de`/`en`/`fr`, je 55). Das entspricht der
+  Praxis bei Wavelength, ist aber eine halbe Sache.
+- **Kein Votekick**, anders als bei den anderen drei Mehrspieler-Spielen. Hier
+  bricht stattdessen die Partie ab, wenn jemand mit Platz endgültig geht; ein
+  bloßer Verbindungsabbruch tut das nicht, der Platz wird dann ohne Frist
+  gehalten.
+- **Kein Archiv** für gespielte Partien.
+- **Noch nicht deployed.** Alles liegt auf `ccr-ccf83e68-v481b6`, nicht auf
+  `main`. Erst ein Merge nach `main` löst die Pages-Action aus. Das Backend auf
+  Render wird davon ohnehin nicht angefasst und muss getrennt neu deployed
+  werden, sonst kennt es die `ttt:`-Events nicht.
+- **Gefunden, nicht behoben:** `WavelengthLobby.getState()` schickt
+  `players: this.getPlayers()` an alle — samt `reconnectKey` jedes Spielers.
+  Wer in der Lobby sitzt, könnte damit die Session eines anderen übernehmen.
+  Fremdes Spiel, deshalb nicht im selben Commit angefasst. Eigener Vorgang.
+
+---
+
 ## 2026-10-23 (später) — Umstellung auf iryo.bid zurückgenommen
 
 ### Gemacht
